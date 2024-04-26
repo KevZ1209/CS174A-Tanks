@@ -116,13 +116,37 @@ export class Assignment2 extends Base_Scene {
         return model_transform;
     }
 
+
     display(context, program_state) {
         super.display(context, program_state);
         const blue = hex_color("#1a9ffa");
+        const red = hex_color("#FF0000");
         let model_transform = Mat4.identity();
 
         // Example for drawing a cube, you can remove this line if needed
+
+        // TODO:  Draw your entire scene here.  Use this.draw_box( graphics_state, model_transform ) to call your helper
+
+        // define some functions
+        function get_angle() {
+            const t = program_state.animation_time / 1000;
+            return (Math.PI/40) * (Math.sin(Math.PI * t) + 1)
+        }
         this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
-        // TODO:  Draw your entire scene here.  Use this.draw_box( graphics_state, model_transform ) to call your helper.
+
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
+        for (let i = 0; i < 8; i++) {
+            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
+            let translate_1 = Mat4.translation(1, 1, 0)
+            let rotate = Mat4.rotation(get_angle(), 0, 0, 1)
+            let translate_2 = Mat4.translation(-1, -1, 0)
+            let translate_3 = Mat4.translation(0, 2, 0)
+
+            model_transform = model_transform.times(translate_3.times(translate_2.times(rotate.times(translate_1))))
+
+            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:red}));
+
+        }
+
     }
 }
