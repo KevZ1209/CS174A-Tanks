@@ -62,6 +62,13 @@ class Base_Scene extends Scene {
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
         };
+
+        this.colors = []
+        // push 8 random colors
+        for (let i = 0; i < 8; i++) {
+            this.colors.push(color(Math.random(), Math.random(), Math.random(), 1));
+        }
+
         // The white material and basic shader are used for drawing the outline.
         this.white = new Material(new defs.Basic_Shader());
     }
@@ -111,10 +118,27 @@ export class Assignment2 extends Base_Scene {
         });
     }
 
-    draw_box(context, program_state, model_transform) {
+    draw_box(context, program_state, model_transform, color=null) {
         // TODO:  Helper function for requirement 3 (see hint).
         //        This should make changes to the model_transform matrix, draw the next box, and return the newest model_transform.
         // Hint:  You can add more parameters for this function, like the desired color, index of the box, etc.
+        function get_angle() {
+            const t = program_state.animation_time / 1000;
+            return (Math.PI/40) * (Math.sin(Math.PI * t) + 1)
+        }
+        const blue = hex_color("#1a9ffa");
+
+        if (color === null) {
+            color = blue
+        }
+
+        let translate_1 = Mat4.translation(1, 1, 0)
+        let rotate = this.sway ? Mat4.rotation(get_angle(), 0, 0, 1) :  Mat4.rotation(Math.PI/20, 0, 0, 1)
+        let translate_2 = Mat4.translation(-1, -1, 0)
+        let translate_3 = Mat4.translation(0, 2, 0)
+
+        model_transform = model_transform.times(translate_3.times(translate_2.times(rotate.times(translate_1))))
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
 
         return model_transform;
     }
@@ -122,33 +146,16 @@ export class Assignment2 extends Base_Scene {
 
     display(context, program_state) {
         super.display(context, program_state);
-        const blue = hex_color("#1a9ffa");
-        const red = hex_color("#FF0000");
         let model_transform = Mat4.identity();
 
         // Example for drawing a cube, you can remove this line if needed
 
         // TODO:  Draw your entire scene here.  Use this.draw_box( graphics_state, model_transform ) to call your helper
 
-        // define some functions
-        function get_angle() {
-            const t = program_state.animation_time / 1000;
-            return (Math.PI/40) * (Math.sin(Math.PI * t) + 1)
-        }
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
-
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
-        for (let i = 0; i < 8; i++) {
-            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
-            let translate_1 = Mat4.translation(1, 1, 0)
-            let rotate = this.sway ? Mat4.rotation(get_angle(), 0, 0, 1) :  Mat4.rotation(Math.PI/20, 0, 0, 1)
-            let translate_2 = Mat4.translation(-1, -1, 0)
-            let translate_3 = Mat4.translation(0, 2, 0)
-
-            model_transform = model_transform.times(translate_3.times(translate_2.times(rotate.times(translate_1))))
-
-            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:red}));
-
+        // draw the bottom cube
+        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:this.colors[0]}));
+        for (let i = 0; i < 7; i++) {
+            model_transform = this.draw_box(context, program_state, model_transform, this.colors[i+1]);
         }
 
     }
