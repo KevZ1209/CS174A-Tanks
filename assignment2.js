@@ -49,6 +49,8 @@ class Base_Scene extends Scene {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
         this.hover = this.swarm = false;
+        this.sway = false;
+
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         this.shapes = {
             'cube': new Cube(),
@@ -105,6 +107,7 @@ export class Assignment2 extends Base_Scene {
         });
         this.key_triggered_button("Sit still", ["m"], () => {
             // TODO:  Requirement 3d:  Set a flag here that will toggle your swaying motion on and off.
+            this.sway ^= 1
         });
     }
 
@@ -138,7 +141,7 @@ export class Assignment2 extends Base_Scene {
         for (let i = 0; i < 8; i++) {
             this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:blue}));
             let translate_1 = Mat4.translation(1, 1, 0)
-            let rotate = Mat4.rotation(get_angle(), 0, 0, 1)
+            let rotate = this.sway ? Mat4.rotation(get_angle(), 0, 0, 1) :  Mat4.rotation(Math.PI/20, 0, 0, 1)
             let translate_2 = Mat4.translation(-1, -1, 0)
             let translate_3 = Mat4.translation(0, 2, 0)
 
