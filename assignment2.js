@@ -29,6 +29,35 @@ class Cube_Outline extends Shape {
         // When a set of lines is used in graphics, you should think of the list entries as
         // broken down into pairs; each pair of vertices will be drawn as a line segment.
         // Note: since the outline is rendered with Basic_shader, you need to redefine the position and color of each vertex
+        this.arrays.position = Vector3.cast(
+            [-1, 1, 1], [1, 1, 1],
+            [1, 1, 1], [1, -1, 1],
+            [1, -1, 1], [-1, -1, 1],
+            [-1, -1, 1], [-1, 1, 1],
+            [-1, 1, 1], [-1, 1, -1],
+            [-1, 1, -1], [-1, -1, -1],
+            [-1, -1, -1], [-1, -1, 1],
+            [-1, -1, -1], [1, -1, -1],
+            [-1, 1, -1], [1, 1, -1],
+            [1, 1, -1], [1, 1, 1],
+            [1, 1, -1], [1, -1, -1],
+            [1, -1, -1], [1, -1, 1]
+        )
+        this.arrays.color = [
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+            vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
+        ]
+        this.indices = false
     }
 }
 
@@ -50,6 +79,7 @@ class Base_Scene extends Scene {
         super();
         this.hover = this.swarm = false;
         this.sway = true;
+        this.outline = false;
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         this.shapes = {
@@ -103,6 +133,10 @@ export class Assignment2 extends Base_Scene {
         // TODO:  Create a class member variable to store your cube's colors.
         // Hint:  You might need to create a member variable at somewhere to store the colors, using `this`.
         // Hint2: You can consider add a constructor for class Assignment2, or add member variables in Base_Scene's constructor.
+        this.colors = []
+        for (let i = 0; i < 8; i++) {
+            this.colors.push(color(Math.random(), Math.random(), Math.random(), 1));
+        }
     }
 
     make_control_panel() {
@@ -111,6 +145,7 @@ export class Assignment2 extends Base_Scene {
         // Add a button for controlling the scene.
         this.key_triggered_button("Outline", ["o"], () => {
             // TODO:  Requirement 5b:  Set a flag here that will toggle your outline on and off
+            this.outline ^= 1
         });
         this.key_triggered_button("Sit still", ["m"], () => {
             // TODO:  Requirement 3d:  Set a flag here that will toggle your swaying motion on and off.
@@ -138,7 +173,12 @@ export class Assignment2 extends Base_Scene {
         let translate_3 = Mat4.translation(0, 2, 0)
 
         model_transform = model_transform.times(translate_3.times(translate_2.times(rotate.times(translate_1))))
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        if (this.outline) {
+            this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
+        }
+        else {
+            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+        }
 
         return model_transform;
     }
@@ -152,8 +192,13 @@ export class Assignment2 extends Base_Scene {
 
         // TODO:  Draw your entire scene here.  Use this.draw_box( graphics_state, model_transform ) to call your helper
 
-        // draw the bottom cube
-        this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:this.colors[0]}));
+        // draw the bottom cube/outline
+        if (this.outline) {
+            this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
+        }
+        else {
+            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:this.colors[0]}));
+        }
         for (let i = 0; i < 7; i++) {
             model_transform = this.draw_box(context, program_state, model_transform, this.colors[i+1]);
         }
