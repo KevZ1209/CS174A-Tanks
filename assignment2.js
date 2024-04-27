@@ -43,6 +43,8 @@ class Cube_Outline extends Shape {
             [1, 1, -1], [1, -1, -1],
             [1, -1, -1], [1, -1, 1]
         )
+
+        // make it all white
         this.arrays.color = [
             vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
             vec4(1, 1, 1, 1), vec4(1, 1, 1, 1),
@@ -65,6 +67,13 @@ class Cube_Single_Strip extends Shape {
     constructor() {
         super("position", "normal");
         // TODO (Requirement 6)
+        this.arrays.position = Vector3.cast(
+            [1,1,1], [1,1,-1], [1,-1,1], [1,-1,-1], [-1,1,1], [-1,1,-1], [-1,-1,1], [-1,-1,-1]
+        )
+        this.arrays.normal = Vector3.cast(
+            [1,1,1], [1,1,-1], [1,-1,1], [1,-1,-1], [-1,1,1], [-1,1,-1], [-1,-1,1], [-1,-1,-1]
+        )
+        this.indices.push(4, 0, 6, 2, 3, 0, 1, 4, 5, 6, 7, 3, 5, 1)
     }
 }
 
@@ -85,6 +94,7 @@ class Base_Scene extends Scene {
         this.shapes = {
             'cube': new Cube(),
             'outline': new Cube_Outline(),
+            'strip': new Cube_Single_Strip()
         };
 
         // *** Materials
@@ -153,7 +163,7 @@ export class Assignment2 extends Base_Scene {
         });
     }
 
-    draw_box(context, program_state, model_transform, color=null) {
+    draw_box(context, program_state, model_transform, color=null, strip=false, scale_amt=1) {
         // TODO:  Helper function for requirement 3 (see hint).
         //        This should make changes to the model_transform matrix, draw the next box, and return the newest model_transform.
         // Hint:  You can add more parameters for this function, like the desired color, index of the box, etc.
@@ -167,9 +177,10 @@ export class Assignment2 extends Base_Scene {
             color = blue
         }
 
-        let translate_1 = Mat4.translation(1, 1, 0)
+        // let scale = Mat4.scale(1, scale_amt, 1)
+        let translate_1 = Mat4.translation(1, scale_amt, 0)
         let rotate = this.sway ? Mat4.rotation(get_angle(), 0, 0, 1) :  Mat4.rotation(Math.PI/20, 0, 0, 1)
-        let translate_2 = Mat4.translation(-1, -1, 0)
+        let translate_2 = Mat4.translation(-1, -1 * scale_amt, 0)
         let translate_3 = Mat4.translation(0, 2, 0)
 
         model_transform = model_transform.times(translate_3.times(translate_2.times(rotate.times(translate_1))))
@@ -177,7 +188,14 @@ export class Assignment2 extends Base_Scene {
             this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
         }
         else {
-            this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+            if (strip) {
+                this.shapes.strip.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}), "TRIANGLE_STRIP");
+            }
+            else {
+                this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:color}));
+            }
+
+
         }
 
         return model_transform;
@@ -186,8 +204,18 @@ export class Assignment2 extends Base_Scene {
 
     display(context, program_state) {
         super.display(context, program_state);
+
+        const SCALE_AMT = 1.5
+
         let model_transform = Mat4.identity();
 
+        this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
+
+        let translate_1 = Mat4.translation(1, 1, 0)
+        let scale = model_transform.times(Mat4.scale(1, SCALE_AMT, 1))
+        let translate_2 = Mat4.translation(-1, -1, 0)
+
+        model_transform = model_transform.times(translate_2.times(scale.times(translate_1)))
         // Example for drawing a cube, you can remove this line if needed
 
         // TODO:  Draw your entire scene here.  Use this.draw_box( graphics_state, model_transform ) to call your helper
@@ -200,7 +228,7 @@ export class Assignment2 extends Base_Scene {
             this.shapes.cube.draw(context, program_state, model_transform, this.materials.plastic.override({color:this.colors[0]}));
         }
         for (let i = 0; i < 7; i++) {
-            model_transform = this.draw_box(context, program_state, model_transform, this.colors[i+1]);
+            model_transform = this.draw_box(context, program_state, model_transform, this.colors[i+1], i % 2 === 0, SCALE_AMT);
         }
 
     }
