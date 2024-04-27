@@ -178,12 +178,11 @@ export class Assignment2 extends Base_Scene {
         }
 
         // let scale = Mat4.scale(1, scale_amt, 1)
-        let translate_1 = Mat4.translation(1, scale_amt, 0)
+        let translate_first = Mat4.translation(1, 1, 0)
         let rotate = this.sway ? Mat4.rotation(get_angle(), 0, 0, 1) :  Mat4.rotation(Math.PI/20, 0, 0, 1)
-        let translate_2 = Mat4.translation(-1, -1 * scale_amt, 0)
-        let translate_3 = Mat4.translation(0, 2, 0)
+        let translate_next = Mat4.translation(0, 2*scale_amt, 0)
 
-        model_transform = model_transform.times(translate_3.times(translate_2.times(rotate.times(translate_1))))
+        model_transform = translate_next.times(rotate.times(model_transform))
         if (this.outline) {
             this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
         }
@@ -209,13 +208,12 @@ export class Assignment2 extends Base_Scene {
 
         let model_transform = Mat4.identity();
 
-        this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
+        // this.shapes.outline.draw(context, program_state, model_transform, this.white, "LINES");
 
         let translate_1 = Mat4.translation(1, 1, 0)
         let scale = model_transform.times(Mat4.scale(1, SCALE_AMT, 1))
-        let translate_2 = Mat4.translation(-1, -1, 0)
 
-        model_transform = model_transform.times(translate_2.times(scale.times(translate_1)))
+        model_transform = model_transform.times((scale.times(translate_1)))
         // Example for drawing a cube, you can remove this line if needed
 
         // TODO:  Draw your entire scene here.  Use this.draw_box( graphics_state, model_transform ) to call your helper
@@ -230,6 +228,8 @@ export class Assignment2 extends Base_Scene {
         for (let i = 0; i < 7; i++) {
             model_transform = this.draw_box(context, program_state, model_transform, this.colors[i+1], i % 2 === 0, SCALE_AMT);
         }
+
+
 
     }
 }
