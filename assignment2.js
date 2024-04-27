@@ -49,7 +49,7 @@ class Base_Scene extends Scene {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
         this.hover = this.swarm = false;
-        this.sway = false;
+        this.sway = true;
 
         // At the beginning of our program, load one of each of these shape definitions onto the GPU.
         this.shapes = {
