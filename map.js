@@ -23,7 +23,7 @@ class Base_Scene extends Scene {
         // *** Materials
         this.materials = {
             block: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .8, color: hex_color("#ffffff")}),
+                {ambient: .4, diffusivity: .8, specularity: 0.1, color: hex_color("#e1cb8d")}),
         };
     }
 
@@ -67,7 +67,7 @@ export class Map extends Base_Scene {
         let model_transform = Mat4.identity()
 
         // Get 1st level
-        let level = schematics[0];
+        let level = schematics[1];
 
         // remove all whitespace/newlines
         level = level.replace(/\D/g, "");
