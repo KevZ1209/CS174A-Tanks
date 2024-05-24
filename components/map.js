@@ -84,15 +84,6 @@ export class Map {
         // remove all whitespace/newlines
         level = level.replace(/\D/g, "");
 
-        // model_transform = Mat4.translation(0, -BLOCK_SIZE, 0);
-        // for (let i = 0; i < LEVEL_HEIGHT; i++) {
-        //     for (let j = 0; j < LEVEL_WIDTH; j++) {
-        //         this.shapes.block.draw(context, program_state, model_transform, this.blockMaterials[i][j]);
-        //         model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform);
-        //     }
-        //     model_transform = Mat4.translation(0, -BLOCK_SIZE, BLOCK_SIZE * i);
-        // }
-
         model_transform = Mat4.identity()
 
         // draw background
