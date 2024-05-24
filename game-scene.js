@@ -1,6 +1,6 @@
 import { defs, tiny } from './examples/common.js';
 import { Map } from './components/map.js';
-import { Tank } from './components/tank.js';
+import { Tank, TANK_TYPE_ENUM } from './components/tank.js';
 import { Bullet } from './components/bullet.js';
 
 const {
@@ -10,10 +10,9 @@ const {
 const { Textured_Phong } = defs;
 
 const BULLET_SPEED = 0.5;
-const INITIAL_USER_X = 3;
-const INITIAL_USER_Z = 3;
-const INITIAL_USER_ROTATION = Mat4.identity();
-const USER_TANK_COLOR = "#0F65DE";
+const INITIAL_USER_X = -10;
+const INITIAL_USER_Z = -10;
+const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 
@@ -22,18 +21,18 @@ export class GameScene extends Scene {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
-        // map
-        this.map = new Map();
-        this.level = 0;
-
         // player movement
-        this.user = new Tank(INITIAL_USER_X, INITIAL_USER_Z, INITIAL_USER_ROTATION, USER_TANK_COLOR)
+        this.user = new Tank(INITIAL_USER_X, INITIAL_USER_Z, INITIAL_USER_ANGLE, TANK_TYPE_ENUM.USER);
         this.direction = {
             up: false,
             down: false,
             right: false,
             left: false
         }
+
+        // map
+        this.map = new Map(this.user);
+        this.level = 0;
 
         this.cursor_x = INITIAL_CURSOR_X;
         this.cursor_z = INITIAL_CURSOR_Z;
@@ -72,7 +71,7 @@ export class GameScene extends Scene {
         this.key_triggered_button("Next Level", ["l"], () => {
             if (this.level < 2) {
                 this.level += 1;
-                this.user.updatePosition(INITIAL_USER_X, INITIAL_USER_Z);
+                this.map.initializeLevel(this.level);
             }
         })
     }
@@ -157,6 +156,9 @@ export class GameScene extends Scene {
 
             // remove default cursor
             canvas.style.cursor = "none";
+
+            // TESTING ONLY
+            this.map.initializeLevel(0);
         }
 
         // ** Render ** display all set perspective, lights, and models in the scene
@@ -171,7 +173,7 @@ export class GameScene extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
         // map
-        this.map.renderLevel(context, program_state, this.level);
+        this.map.render(context, program_state);
 
         // user cursor
         let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 1.1, this.cursor_z))
@@ -193,7 +195,7 @@ export class GameScene extends Scene {
         if (this.direction.left) {
             new_x -= 0.2;
         }
-        this.user.updatePosition(this.map.collisionMap, this.direction, new_x, new_z);
+        this.user.updatePosition(new_x, new_z, this.direction);
         this.user.render(context, program_state);
 
         // bullets

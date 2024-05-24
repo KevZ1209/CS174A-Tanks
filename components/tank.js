@@ -8,17 +8,37 @@ const TANK_WIDTH = 0.5;
 const TANK_HEIGHT = 1;
 const TANK_DEPTH = 0.5;
 
-export class Tank {
-  constructor(initial_x, initial_z, initial_rotation, color) {
+const TANK_TYPE_ENUM = {
+  USER: {
+    color: hex_color("#0F65DE")
+  },
+  ENEMY_STATIONARY: {
+    color: hex_color("#C68C2F")
+  },
+  ENEMY_MOVING: {
+    color: hex_color("#7A705F")
+  },
+  ENEMY_MOVING_BOMB: {
+    color: hex_color("#DDC436")
+  },
+  ENEMY_MOVING_FAST_SHOOTING: {
+    color: hex_color("#3F7F6F")
+  }
+};
+
+class Tank {
+  constructor(initial_x, initial_z, initial_angle, type, collisionMap = []) {
     // movement controls
     this.x = initial_x;
     this.z = initial_z;
-    this.rotation = initial_rotation
+    this.angle = initial_angle
     this.hide = false;
+    this.collisionMap = collisionMap;
+    this.type = type;
 
     // material and shape
     this.material = new Material(new defs.Phong_Shader(),
-      { ambient: .4, diffusivity: .6, color: hex_color(color) }
+      { ambient: .4, diffusivity: .6, color: type.color }
     )
     this.shape = new Shape_From_File("assets/tank.obj");
   }
@@ -26,32 +46,40 @@ export class Tank {
   render(context, program_state) {
     if (!this.hide) {
       let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
-        .times(this.rotation);
+        .times(Mat4.rotation(this.angle, 0, 1, 0));
       this.shape.draw(context, program_state, model_transform, this.material);
     }
   }
 
-  updatePosition(collisionMap, direction, new_x, new_z) {
-    // Update X position
-    let potential_new_x = new_x;
-    if (direction.right && !this.checkCollision(collisionMap, potential_new_x, this.z)) {
-      this.x = potential_new_x;
-    } else if (direction.left && !this.checkCollision(collisionMap, potential_new_x, this.z)) {
-      this.x = potential_new_x;
-    }
+  updatePosition(new_x, new_z, direction=null) {
+    // update with collision detection
+    if (direction) {
+      // Update X position
+      let potential_new_x = new_x;
+      if (direction.right && !this.checkCollision(potential_new_x, this.z)) {
+        this.x = potential_new_x;
+      } else if (direction.left && !this.checkCollision(potential_new_x, this.z)) {
+        this.x = potential_new_x;
+      }
 
-    // Update Z position
-    let potential_new_z = new_z;
-    if (direction.up && !this.checkCollision(collisionMap, this.x, potential_new_z)) {
-      this.z = potential_new_z;
-    } else if (direction.down && !this.checkCollision(collisionMap, this.x, potential_new_z)) {
-      this.z = potential_new_z;
+      // Update Z position
+      let potential_new_z = new_z;
+      if (direction.up && !this.checkCollision(this.x, potential_new_z)) {
+        this.z = potential_new_z;
+      } else if (direction.down && !this.checkCollision(this.x, potential_new_z)) {
+        this.z = potential_new_z;
+      }
+      
+    // update without collision detection
+    } else {
+      this.x = new_x;
+      this.z = new_z;
     }
   }
 
-  checkCollision(collisionMap, potential_x, potential_z) {
+  checkCollision(potential_x, potential_z) {
     let position = vec3(potential_x, 0, potential_z);
-    for (let elem of collisionMap) {
+    for (let elem of this.collisionMap) {
       const tankMin = position.minus(vec3(TANK_WIDTH, 0, TANK_DEPTH));
       const tankMax = position.plus(vec3(TANK_WIDTH, TANK_HEIGHT, TANK_DEPTH));
 
@@ -69,9 +97,12 @@ export class Tank {
     return false; // No collision
   }
 
+  updateCollisionMap(collisionMap) {
+    this.collisionMap = collisionMap;
+  }
 
   updateRotation(angle) {
-    this.rotation = Mat4.rotation(angle, 0, 1, 0);
+    this.angle = angle;
   }
 
   getPosition() {
@@ -86,3 +117,5 @@ export class Tank {
     this.hide = false;
   }
 }
+
+export { Tank, TANK_TYPE_ENUM }

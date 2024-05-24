@@ -1,5 +1,6 @@
 import { Cube, defs, tiny } from "../examples/common.js";
 import { schematics } from "./map_schematics.js";
+import { Tank, TANK_TYPE_ENUM } from "./tank.js";
 
 const { vec4, hex_color, Mat4, Material, Texture } = tiny;
 
@@ -9,92 +10,163 @@ const BLOCK_SIZE = 2;
 const LEVEL_WIDTH = 20;
 const LEVEL_HEIGHT = 16;
 
+const MAP_SCHEMATIC_ENUM = {
+    EMPTY: '0',
+    BLOCK: '1',
+    CORK: '2',
+    USER: '*',
+    ENEMY_STATIONARY: '3',
+    ENEMY_MOVING: '4',
+    ENEMY_MOVING_BOMB: '5',
+    ENEMY_MOVING_FAST_SHOOTING: '6'
+}
+
+const BLOCK_COLOR = hex_color("#D9AD89");
+const CORK_COLOR = hex_color("#BC8953");
+
 export class Map {
-    constructor() {
+    constructor(user) {
+        this.collisionMap = [];
+        this.enemies = [];
+        this.userPosition = Mat4.identity();
+        this.user = user;
+        this.level = 0;
 
         this.shapes = {
             block: new Cube(),
             background: new defs.Square()
         };
 
-        this.materials = []
+        this.materials = {
+            block: [],
+            cork: new Material(new Textured_Phong(), {
+                ambient: .35, diffusivity: .8, specularity: 0.1,
+                color: CORK_COLOR,
+                texture: new Texture("assets/cork.jpg")
+            }),
+            background: new Material(new Textured_Phong(), {
+                ambient: .4, diffusivity: .8, specularity: 0.1,
+                color: BLOCK_COLOR,
+                texture: new Texture("assets/map_background.jpg")
+            })
+        }
         this.files = [
-            "assets/wood1.jpg",
-            "assets/wood2.jpg",
-            "assets/wood3.jpg",
-            "assets/wood4.jpg",
-            "assets/wood5.jpg",
-            "assets/wood6.jpg"
+            "assets/block1.jpg",
+            "assets/block2.jpg",
+            "assets/block3.jpg",
+            "assets/block4.jpg",
+            "assets/block5.jpg",
+            "assets/block6.jpg"
         ];
         for (let file of this.files) {
-            this.materials.push(
+            this.materials.block.push(
                 new Material(new Textured_Phong(), {
                     ambient: .35, diffusivity: .8, specularity: 0.1,
-                    color: hex_color("#D9AD89"),
+                    color: BLOCK_COLOR,
                     texture: new Texture(file)
                 })
             );
         }
+    }
 
-        this.backgroundMaterial = new Material(new Textured_Phong(), {
-            ambient: .4, diffusivity: .8, specularity: 0.1,
-            color: hex_color("#D9AD89"),
-            texture: new Texture("assets/map_background.jpg")
-        })
-
-        this.blockMaterials = [];
+    initializeLevel(level) {
+        // reset member variables
         this.collisionMap = [];
-        this.initializeBlockMaterials()
-    }
+        this.enemies = [];
 
-    initializeBlockMaterials() {
-        for (let i = 0; i < LEVEL_HEIGHT; i++) {
-            this.blockMaterials[i] = [];
-            for (let j = 0; j < LEVEL_WIDTH; j++) {
-                let index = Math.floor(Math.random() * this.materials.length);
-                this.blockMaterials[i][j] = this.materials[index];
-            }
-        }
-    }
-
-    renderLevel(context, program_state, level_num) {
+        // parse schematic
+        this.level = level;
+        let schematic = schematics[this.level].replace(/\s/g, ""); // remove all whitespace/newlines
         let model_transform = Mat4.identity()
 
-        let level = schematics[level_num];
-
-        // remove all whitespace/newlines
-        level = level.replace(/\D/g, "");
-
-        model_transform = Mat4.identity()
-
-        // draw background
-        let background_transform = model_transform.times(Mat4.translation(16, -1, 15))
-            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
-            .times(Mat4.scale(50, 30, 1))
-        this.shapes.background.draw(context, program_state, background_transform, this.backgroundMaterial)
-
-        // draw blocks
         for (let i = 0; i < LEVEL_HEIGHT; i++) {
             for (let j = 0; j < LEVEL_WIDTH; j++) {
                 let curr_index = i * LEVEL_WIDTH + j;
+                let x = j * BLOCK_SIZE; // j corresponds to x in WS
+                let z = i * BLOCK_SIZE; // i corresponse to z in WS
 
-                // if current character is a BLOCK
-                if (level[curr_index] === '1') {
+                if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.BLOCK) {
+                    // if current character is a BLOCK
                     let block_position = model_transform.times(vec4(0, 0, 0, 1));
-                    this.collisionMap.push({ position: block_position.to3(), size: BLOCK_SIZE });
-                    this.shapes.block.draw(context, program_state, model_transform, this.blockMaterials[i][j]);
-                    model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform);
+                    this.collisionMap.push({
+                        position: block_position.to3(),
+                        model_transform: model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.BLOCK,
+                        material: this.getRandomBlockMaterial()
+                    });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.CORK) {
+                    // if current character is a CORK
+                    let cork_position = model_transform.times(vec4(0, 0, 0, 1));
+                    this.collisionMap.push({
+                        position: cork_position.to3(),
+                        model_transform: model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.CORK,
+                        material: this.materials.cork
+                    });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.USER) {
+                    // if current character is an USER
+                    this.userPosition = vec4(x, 0, z, 1);
+                    this.user.updatePosition(x, z);
+                    this.user.updateRotation(Math.PI / 2);
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_STATIONARY) {
+                    // if current character is an ENEMY_STATIONARY
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_STATIONARY);
+                    enemy.updateRotation(-Math.PI / 2);
+                    this.enemies.push(enemy);
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING) {
+                    // if current character is an ENEMY_MOVING
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING);
+                    enemy.updateRotation(-Math.PI / 2);
+                    this.enemies.push(enemy);
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_BOMB) {
+                    // if current character is an ENEMY_MOVING_BOMB
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_BOMB);
+                    enemy.updateRotation(-Math.PI / 2);
+                    this.enemies.push(enemy);
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_FAST_SHOOTING) {
+                    // if current character is an ENEMY_MOVING_FAST_SHOOTING
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_FAST_SHOOTING);
+                    enemy.updateRotation(-Math.PI / 2);
+                    this.enemies.push(enemy);
+                } else if (schematic[curr_index] !== MAP_SCHEMATIC_ENUM.EMPTY) {
+                    // immediately error and stop the program
+                    throw `Invalid schematic: found unknown character ${schematic[curr_index]}`;
                 }
 
-                // if current character is BLANK SPACE
-                else if (level[curr_index] === '0') {
-                    model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform);
-                }
-
-
+                model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform); // next cell in row
             }
+            model_transform = Mat4.translation(0, 0, BLOCK_SIZE * i); // next row
+        }
 
-            model_transform = Mat4.translation(0, 0, BLOCK_SIZE * i);
+        // set collision maps
+        this.user.updateCollisionMap(this.collisionMap);
+        for (let enemy of this.enemies) {
+            enemy.updateCollisionMap(this.collisionMap);
+        }
+    }
+
+    getRandomBlockMaterial() {
+        let index = Math.floor(Math.random() * this.materials.block.length);
+        return this.materials.block[index];
+    }
+
+    render(context, program_state) {
+        // draw background
+        let background_transform = Mat4.identity().times(Mat4.translation(16, -1, 15))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(50, 30, 1))
+        this.shapes.background.draw(context, program_state, background_transform, this.materials.background)
+
+        //  draw elements
+        for (let elem of this.collisionMap) {
+            this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
+        }
+
+        // draw enemies
+        for (let enemy of this.enemies) {
+            enemy.render(context, program_state);
         }
     }
 }
