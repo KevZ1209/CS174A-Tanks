@@ -3,8 +3,10 @@ import { Map } from './components/map.js';
 import { Shape_From_File } from './examples/obj-file-demo.js';
 
 const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Matrix, Mat4, Light, Shape, Material, Scene,
+    Vector, Vector3, vec, vec3, vec4, color, hex_color, Matrix, Mat4, Light, Shape, Material, Scene, Texture
 } = tiny;
+
+const { Textured_Phong } = defs;
 
 const BULLET_SPEED = 0.5;
 const MAX_BULLET_COLLISIONS = 2;
@@ -27,19 +29,29 @@ export class GameScene extends Scene {
         this.right = false;
         this.left = false;
 
+        this.cursor_x = 0;
+        this.cursor_z = 0;
+
         // bullets
         this.animation_queue = [];
 
         // shapes
         this.shapes = {
-            'tank': new Shape_From_File("assets/tank.obj"),
-            'bullet': new Subdivision_Sphere(4)
+            tank: new Shape_From_File("assets/tank.obj"),
+            bullet: new Subdivision_Sphere(4),
+            square: new defs.Square()
+
         };
 
         // materials
         this.materials = {
             plastic: new Material(new defs.Phong_Shader(),
                 {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+            cursor: new Material(new Textured_Phong(), {
+                ambient: .4, diffusivity: .8, specularity: 0.1,
+                color: hex_color("#FFFFFF"),
+                texture: new Texture("assets/cursor.png")
+            }),
         };
     }
 
@@ -62,23 +74,23 @@ export class GameScene extends Scene {
         // 1. transform mouse position from screen space to normalized device coordinates (ndc)
         let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
         let pos_ndc_far  = vec4(pos[0], pos[1], 1.0, 1.0);
-        let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
 
         // 2. transform ndc position to world space
         let P = program_state.projection_transform;
         let V = program_state.camera_inverse;
-        let pos_world_near = Mat4.inverse(P.times(V)).times(pos_ndc_near);
-        let pos_world_far  = Mat4.inverse(P.times(V)).times(pos_ndc_far);
-        let center_world_near  = Mat4.inverse(P.times(V)).times(center_ndc_near);
+        let matrix = Mat4.inverse(P.times(V));
+        let pos_world_near = matrix.times(pos_ndc_near);
+        let pos_world_far  = matrix.times(pos_ndc_far);
         pos_world_near.scale_by(1 / pos_world_near[3]);
         pos_world_far.scale_by(1 / pos_world_far[3]);
-        center_world_near.scale_by(1 / center_world_near[3]);
         
-        // 3. find intersection with the ground plane (y = 0)
-        let t = -pos_world_near[1] / (pos_world_far[1] - pos_world_near[1]);
-        let pos_world_ground = pos_world_near.plus(pos_world_far.minus(pos_world_near).times(t));
+        // 3. find intersection with the given plane (y = yWS)
+        let t_ground = -pos_world_near[1] / (pos_world_far[1] - pos_world_near[1]);
+        let t_cursor = (1.1 - pos_world_near[1]) / (pos_world_far[1] - pos_world_near[1]);
+        let pos_world_ground = pos_world_near.plus(pos_world_far.minus(pos_world_near).times(t_ground));
+        let pos_world_cursor = pos_world_near.plus(pos_world_far.minus(pos_world_near).times(t_cursor));
 
-        return pos_world_ground;
+        return [pos_world_ground, pos_world_cursor];
     }
 
     getMousePosition(e, rect) {
@@ -90,18 +102,22 @@ export class GameScene extends Scene {
         e.preventDefault();
             
         // get world space position
-        let pos_world_ground = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
+        let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
 
         // calculate the angle between user position and mouse position and update rotation
         let angle = Math.atan2(pos_world_ground[0] - this.user_x, pos_world_ground[2] - this.user_z);
         this.user_rotation = Mat4.rotation(angle, 0, 1, 0);
+
+        // update cursor position
+        this.cursor_x = pos_world_cursor[0]
+        this.cursor_z = pos_world_cursor[2]
     }
 
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
 
         // get world space position
-        let pos_world_ground = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
+        let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state, 0);
         let angle = Math.atan2(pos_world_ground[0] - this.user_x, pos_world_ground[2] - this.user_z)
         let velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
         // add animation bullet to queue
@@ -190,6 +206,9 @@ ds
             let canvas = context.canvas;
             canvas.addEventListener("mousemove", (e) => this.handleMouseMove(e, program_state, canvas.getBoundingClientRect())); // rotate tank towards mouse
             canvas.addEventListener("mousedown", (e) => this.handleMouseDown(e, program_state, canvas.getBoundingClientRect())); // shoot bullets
+
+            // remove default cursor
+            canvas.style.cursor = "none";
         }
 
         // ** Render ** display all set perspective, lights, and models in the scene
@@ -231,6 +250,12 @@ ds
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
                                             .times(this.user_rotation);
         this.shapes.tank.draw(context, program_state, user_transform, this.materials.plastic.override({color: hex_color("#6A9956")}));
+
+        // user cursor
+        let cursor_transform = model_transform.times(Mat4.translation(this.cursor_x, 1.1, this.cursor_z))
+                                              .times(Mat4.rotation(Math.PI, 0, 1, 0))
+                                              .times(Mat4.rotation(Math.PI / 2, 1, 0, 0));
+        this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
         // animate bullets
         if (this.animation_queue.length > 0) {
