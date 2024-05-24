@@ -1,9 +1,7 @@
-import {Cube, defs, tiny} from "../examples/common.js";
-import {schematics} from "./map_schematics.js";
+import { Cube, defs, tiny } from "../examples/common.js";
+import { schematics } from "./map_schematics.js";
 
-const {
-    Vector, Vector3, vec, vec3, vec4, color, hex_color, Matrix, Mat4, Light, Shape, Material, Scene, Texture
-} = tiny;
+const { vec4, hex_color, Mat4, Material, Texture } = tiny;
 
 const { Textured_Phong } = defs;
 
