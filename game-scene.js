@@ -144,7 +144,14 @@ ds
             const zOverlap = bulletMin[2] <= blockMax[2] && bulletMax[2] >= blockMin[2];
 
             if (xOverlap && yOverlap && zOverlap) {
-                return block; // Collision detected
+                // Determine the normal vector of the collision
+                let normal = vec3(0, 0, 0);
+                if (Math.abs(bulletPosition[0] - block.position[0]) > Math.abs(bulletPosition[2] - block.position[2])) {
+                    normal[0] = Math.sign(bulletPosition[0] - block.position[0]);
+                } else {
+                    normal[2] = Math.sign(bulletPosition[2] - block.position[2]);
+                }
+                return {block: block, normal: normal};
             }
         }
         return null; // No collision
@@ -230,18 +237,12 @@ ds
                 bullet.position = bullet.position.plus(bullet.velocity);
 
                 // Check for collision with blocks
-                let block = this.checkBulletCollision(bullet.position.to3());
-                if (block) {
-                    // Reflect bullet velocity
-                    const hitBoxPadding = 0.2; // Adjust this value based on bullet size and block size
-
-                    // Determine the axis of collision and reflect the corresponding velocity component
-                    if (Math.abs(bullet.position[0] - block.position[0]) < block.size / 2 + hitBoxPadding) {
-                        bullet.velocity[0] = -bullet.velocity[0];
-                    }
-                    if (Math.abs(bullet.position[2] - block.position[2]) < block.size / 2 + hitBoxPadding) {
-                        bullet.velocity[2] = -bullet.velocity[2];
-                    }
+                let collision = this.checkBulletCollision(bullet.position.to3());
+                if (collision) {
+                    let normal = collision.normal;
+                    let velocity = bullet.velocity;
+                    let dotProduct = velocity.dot(normal);
+                    bullet.velocity = velocity.minus(normal.times(2 * dotProduct));
                 }
                 let bullet_transformation = Mat4.translation(bullet.position[0], 0, bullet.position[2])
                                                 .times(Mat4.scale(0.5, 0.5, 0.5));
