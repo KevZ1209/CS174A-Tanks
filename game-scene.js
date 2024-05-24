@@ -59,7 +59,6 @@ export class GameScene extends Scene {
     }
 
     make_control_panel() {
-        // Up Movement (arrow key up)
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
         this.key_triggered_button("Move Up", ["ArrowUp"], () => { this.direction.up = true },
             "#6E6460", () => { this.direction.up = false });
