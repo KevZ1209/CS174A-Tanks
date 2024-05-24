@@ -19,6 +19,11 @@ export class GameScene extends Scene {
         this.user_z = 2;
         this.user_rotation = Mat4.identity();
 
+        this.up = false;
+        this.down = false;
+        this.right = false;
+        this.left = false;
+
         // global positioning
         this.user_global_transform =  Mat4.identity();
 
@@ -36,31 +41,16 @@ export class GameScene extends Scene {
 
     make_control_panel() {
         // Up Movement (arrow key up)
-        this.key_triggered_button("Up", ['ArrowUp'], () => {
-            if(!(this.paused)){
-                this.user_z -= 1;
-            }
-        });
-        // Down Movement (arrow key down)
-        this.key_triggered_button("Down", ['ArrowDown'], () => {
-            if(!(this.paused)){
-                this.user_z += 1; 
-            }
-        });
-        
-        // Left Movement (arrow key left)
-        this.key_triggered_button("Left", ['ArrowLeft'], () => {
-            if(!(this.paused)){
-                this.user_x -= 1; 
-            }
-        });
-
-        // Right Movement (arrow key right)
-        this.key_triggered_button("Right", ['ArrowRight'], () => {
-            if(!(this.paused)){
-                this.user_x += 1;
-            } 
-        });
+        // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
+        this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.up = true},
+            "#6E6460", () => {this.up = false});
+        this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.down = true},
+            "#6E6460", () => {this.down = false});
+        this.key_triggered_button("Move Left", ["ArrowLeft"], () => {this.left = true},
+            "#6E6460", () => {this.left = false});
+        this.key_triggered_button("Move Right", ["ArrowRight"], () => {this.right = true},
+            "#6E6460", () => {this.right = false});
+        this.new_line();
     }
 
     // convert screen space position to world space position
@@ -93,7 +83,7 @@ export class GameScene extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
 
             // initialize global camera and projection matrices
-            program_state.set_camera(Mat4.translation(-18, 15, -44).times(Mat4.rotation(Math.PI/3, 1, 0, 0)));
+            program_state.set_camera(Mat4.translation(-18, 15, -44).times(Mat4.rotation(Math.PI/2, 1, 0, 0)));
 
             // initialize event listener for mouse over to rotate user towards mouse position
             let canvas = context.canvas;
@@ -126,6 +116,21 @@ export class GameScene extends Scene {
 
         // render user tank
         let model_transform = Mat4.identity();
+
+        // MOVING_THING STUFF...
+        if (this.up === true) {
+            this.user_z -= 0.2;
+        }
+        if (this.down === true) {
+            this.user_z += 0.2;
+        }
+        if (this.right === true) {
+            this.user_x += 0.2;
+        }
+        if (this.left === true) {
+            this.user_x -= 0.2;
+        }
+
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
                                             .times(this.user_rotation)
                                             .times(this.user_global_transform);
