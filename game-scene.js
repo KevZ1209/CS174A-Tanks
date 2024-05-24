@@ -17,8 +17,8 @@ export class GameScene extends Scene {
         this.map = new Map();
 
         // player movement
-        this.user_x = 2;
-        this.user_z = 2;
+        this.user_x = 3;
+        this.user_z = 3;
         this.user_rotation = Mat4.identity();
 
         this.up = false;
@@ -110,6 +110,43 @@ export class GameScene extends Scene {
         this.animation_queue.push(animation_bullet);
     }
 
+    checkCollision(tankPosition) {
+        for (let block of this.map.blocks) {
+            const tankMin = tankPosition.minus(vec3(0.5, 0, 0.5)); // Assuming tank size is 1x1x1
+            const tankMax = tankPosition.plus(vec3(0.5, 1, 0.5));  // Adjust based on tank size
+
+            const blockMin = block.position.minus(vec3(block.size *.9, block.size *.9, block.size *.9));
+            const blockMax = block.position.plus(vec3(block.size *.9, block.size *.9, block.size *.9));
+
+            const xOverlap = tankMin[0] <= blockMax[0] && tankMax[0] >= blockMin[0];
+            const yOverlap = tankMin[1] <= blockMax[1] && tankMax[1] >= blockMin[1];
+            const zOverlap = tankMin[2] <= blockMax[2] && tankMax[2] >= blockMin[2];
+
+            if (xOverlap && yOverlap && zOverlap) {
+                return true; // Collision detected
+            }
+        }
+        return false; // No collision
+    }
+
+    updateTankPosition(new_x, new_z) {
+        // Update X position
+        let potential_new_x = new_x;
+        if (this.right && !this.checkCollision(vec3(potential_new_x, 0, this.user_z))) {
+            this.user_x = potential_new_x;
+        } else if (this.left && !this.checkCollision(vec3(potential_new_x, 0, this.user_z))) {
+            this.user_x = potential_new_x;
+        }
+
+        // Update Z position
+        let potential_new_z = new_z;
+        if (this.up && !this.checkCollision(vec3(this.user_x, 0, potential_new_z))) {
+            this.user_z = potential_new_z;
+        } else if (this.down && !this.checkCollision(vec3(this.user_x, 0, potential_new_z))) {
+            this.user_z = potential_new_z;
+        }
+    }
+
     display(context, program_state) {
         // ** Setup ** This part sets up the scene's overall camera matrix, projection matrix, and lights:
         if (!context.scratchpad.controls) {
@@ -142,19 +179,24 @@ export class GameScene extends Scene {
         // user tank
         let model_transform = Mat4.identity();
 
-        // MOVING_THING STUFF...
-        if (this.up === true) {
-            this.user_z -= 0.2;
+        // moving thingz stuff part 2
+        let new_x = this.user_x;
+        let new_z = this.user_z;
+
+        if (this.up) {
+            new_z -= 0.2;
         }
-        if (this.down === true) {
-            this.user_z += 0.2;
+        if (this.down) {
+            new_z += 0.2;
         }
-        if (this.right === true) {
-            this.user_x += 0.2;
+        if (this.right) {
+            new_x += 0.2;
         }
-        if (this.left === true) {
-            this.user_x -= 0.2;
+        if (this.left) {
+            new_x -= 0.2;
         }
+
+        this.updateTankPosition(new_x,new_z);
 
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
                                             .times(this.user_rotation);

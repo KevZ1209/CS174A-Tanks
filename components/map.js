@@ -62,6 +62,7 @@ export class Map {
         })
 
         this.blockMaterials = [];
+        this.blocks = []; // Add this line
         this.initializeBlockMaterials()
     }
 
@@ -99,6 +100,8 @@ export class Map {
 
                 // if current character is a BLOCK
                 if (level[curr_index] === '1') {
+                    let block_position = model_transform.times(vec4(0, 0, 0, 1));
+                    this.blocks.push({position: block_position.to3(), size: BLOCK_SIZE});
                     this.shapes.block.draw(context, program_state, model_transform, this.blockMaterials[i][j]);
                     model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform);
                 }
