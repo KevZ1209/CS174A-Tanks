@@ -6,7 +6,7 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Matrix, Mat4, Light, Shape, Material, Scene,
 } = tiny;
 
-const BULLET_SPEED = 0.1;
+const BULLET_SPEED = 0.5;
 
 export class GameScene extends Scene {
     constructor() {
@@ -101,11 +101,13 @@ export class GameScene extends Scene {
 
         // get world space position
         let pos_world_ground = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
-
+        let angle = Math.atan2(pos_world_ground[0] - this.user_x, pos_world_ground[2] - this.user_z)
+        let velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
         // add animation bullet to queue
         let animation_bullet = {
             position: vec4(this.user_x, 1, this.user_z, 1),
-            angle: Math.atan2(pos_world_ground[0] - this.user_x, pos_world_ground[2] - this.user_z),
+            angle: angle,
+            velocity: velocity,
         }
         this.animation_queue.push(animation_bullet);
     }
@@ -127,6 +129,25 @@ export class GameScene extends Scene {
             }
         }
         return false; // No collision
+    }
+ds
+    checkBulletCollision(bulletPosition) {
+        for (let block of this.map.blocks) {
+            const bulletMin = bulletPosition.minus(vec3(0.2, 0.2, 0.2)); // Adjust based on bullet size
+            const bulletMax = bulletPosition.plus(vec3(0.2, 0.2, 0.2));  // Adjust based on bullet size
+
+            const blockMin = block.position.minus(vec3(block.size * 0.5, block.size *0.5, block.size *0.5));
+            const blockMax = block.position.plus(vec3(block.size *0.5, block.size *0.5, block.size *0.5));
+
+            const xOverlap = bulletMin[0] <= blockMax[0] && bulletMax[0] >= blockMin[0];
+            const yOverlap = bulletMin[1] <= blockMax[1] && bulletMax[1] >= blockMin[1];
+            const zOverlap = bulletMin[2] <= blockMax[2] && bulletMax[2] >= blockMin[2];
+
+            if (xOverlap && yOverlap && zOverlap) {
+                return block; // Collision detected
+            }
+        }
+        return null; // No collision
     }
 
     updateTankPosition(new_x, new_z) {
@@ -206,12 +227,23 @@ export class GameScene extends Scene {
         if (this.animation_queue.length > 0) {
             for (let i = 0; i < this.animation_queue.length; i++) {
                 let bullet = this.animation_queue[i];
-                let position = bullet.position.plus(vec4(Math.sin(bullet.angle) * BULLET_SPEED, 
-                                                         0, 
-                                                         Math.cos(bullet.angle) * BULLET_SPEED,
-                                                         0));
-                this.animation_queue[i].position = position; // update bullet with new position
-                let bullet_transformation = Mat4.translation(position[0], 0, position[2])
+                bullet.position = bullet.position.plus(bullet.velocity);
+
+                // Check for collision with blocks
+                let block = this.checkBulletCollision(bullet.position.to3());
+                if (block) {
+                    // Reflect bullet velocity
+                    const hitBoxPadding = 0.2; // Adjust this value based on bullet size and block size
+
+                    // Determine the axis of collision and reflect the corresponding velocity component
+                    if (Math.abs(bullet.position[0] - block.position[0]) < block.size / 2 + hitBoxPadding) {
+                        bullet.velocity[0] = -bullet.velocity[0];
+                    }
+                    if (Math.abs(bullet.position[2] - block.position[2]) < block.size / 2 + hitBoxPadding) {
+                        bullet.velocity[2] = -bullet.velocity[2];
+                    }
+                }
+                let bullet_transformation = Mat4.translation(bullet.position[0], 0, bullet.position[2])
                                                 .times(Mat4.scale(0.5, 0.5, 0.5));
                 this.shapes.bullet.draw(context, program_state, bullet_transformation, this.materials.plastic);
             }
