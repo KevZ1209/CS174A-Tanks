@@ -5,11 +5,6 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Matrix, Mat4, Light, Shape, Material, Scene,
 } = tiny;
 
-const NORTH = "NORTH";
-const EAST = "EAST";
-const SOUTH = "SOUTH";
-const WEST = "WEST";
-
 class Base_Scene extends Scene {
     /**
      *  **Base_scene** is a Scene that can be added to any display canvas.
@@ -20,18 +15,11 @@ class Base_Scene extends Scene {
 
         // gameplay
         this.paused = false;
-        this.time = 0;
 
         // player movement
         this.user_x = 0;
         this.user_z = 0;
-        this.user_direction = SOUTH;
-        this.user_rotation = Mat4.rotation(0, 0, 1, 0); // initially facing south
-        this.user_target_rotation = Mat4.identity();
-        this.user_rotation_start_time = 0;
-        this.user_rotation_end_time = 0;
-        this.user_rotation_duration = 0.1; // Rotation duration in seconds
-        this.user_rotating = false;
+        this.user_rotation = Mat4.identity();
 
         // global positioning
         this.user_global_transform =  Mat4.identity();
@@ -73,14 +61,12 @@ export class tankTest extends Base_Scene {
         this.key_triggered_button("Up", ['ArrowUp'], () => {
             if(!(this.paused)){
                 this.user_z -= 1;
-                this.initiateRotation(NORTH);
             }
         });
         // Down Movement (arrow key down)
         this.key_triggered_button("Down", ['ArrowDown'], () => {
             if(!(this.paused)){
                 this.user_z += 1; 
-                this.initiateRotation(SOUTH);
             }
         });
         
@@ -88,7 +74,6 @@ export class tankTest extends Base_Scene {
         this.key_triggered_button("Left", ['ArrowLeft'], () => {
             if(!(this.paused)){
                 this.user_x -= 1; 
-                this.initiateRotation(WEST);
             }
         });
 
@@ -96,92 +81,74 @@ export class tankTest extends Base_Scene {
         this.key_triggered_button("Right", ['ArrowRight'], () => {
             if(!(this.paused)){
                 this.user_x += 1;
-                this.initiateRotation(EAST);
             } 
         });
     }
 
-    initiateRotation(direction) {
-        const t = this.time;
-        this.user_target_rotation = this.getUserRotation(direction);
-        this.user_direction = direction;
-        this.user_rotation_start_time = t;
-        this.user_rotation_end_time = t + this.user_rotation_duration;
-        this.user_rotating = true;
-        // console.log("start time: ", this.user_rotation_start_time);
-        // console.log("end time: ", this.user_rotation_end_time);
+    // convert screen space position to world space position
+    convertSStoWS(pos, program_state) {
+        // 1. transform mouse position from screen space to normalized device coordinates (ndc)
+        let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
+        let pos_ndc_far  = vec4(pos[0], pos[1],  1.0, 1.0);
+        let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
+
+        // 2. transform ndc position to world space
+        let P = program_state.projection_transform;
+        let V = program_state.camera_inverse;
+        let pos_world_near = Mat4.inverse(P.times(V)).times(pos_ndc_near);
+        let pos_world_far  = Mat4.inverse(P.times(V)).times(pos_ndc_far);
+        let center_world_near  = Mat4.inverse(P.times(V)).times(center_ndc_near);
+        pos_world_near.scale_by(1 / pos_world_near[3]);
+        pos_world_far.scale_by(1 / pos_world_far[3]);
+        center_world_near.scale_by(1 / center_world_near[3]);
+
+        // console.log("near: ", pos_world_near);
+        // console.log("far: ", pos_world_far);
+        // console.log("center: ", center_world_near);
+        return [pos_world_near, pos_world_far, center_world_near];
     }
 
-    getUserRotation(direction) {
-        let rotation_matrix = Mat4.identity();
+    // called once per animation frame
+    display(context, program_state) {
+        // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+        if (!context.scratchpad.controls) {
+            // movement controls
+            this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+            // global camera and projection matrices
+            program_state.set_camera(Mat4.translation(-18, 15, 44).times(Mat4.rotation(Math.PI/2, 1, 0, 0)));
 
-        if (direction === NORTH) {
-            if (this.user_direction === SOUTH) {
-                rotation_matrix = Mat4.rotation(Math.PI, 0, 1, 0);
-            } else if (this.user_direction === WEST) {
-                rotation_matrix = Mat4.rotation(-Math.PI / 2, 0, 1, 0);
-            } else if (this.user_direction === EAST) {
-                rotation_matrix = Mat4.rotation(Math.PI / 2, 0, 1, 0);
-            }
-        } else if (direction === SOUTH) {
-            if (this.user_direction === NORTH) {
-                rotation_matrix = Mat4.rotation(Math.PI, 0, 1, 0);
-            } else if (this.user_direction === WEST) {
-                rotation_matrix = Mat4.rotation(Math.PI / 2, 0, 1, 0);
-            } else if (this.user_direction === EAST) {
-                rotation_matrix = Mat4.rotation(-Math.PI / 2, 0, 1, 0);
-            }
-        } else if (direction === WEST) {
-            if (this.user_direction === EAST) {
-                rotation_matrix = Mat4.rotation(Math.PI, 0, 1, 0);
-            } else if (this.user_direction === NORTH) {
-                rotation_matrix = Mat4.rotation(Math.PI / 2, 0, 1, 0);
-            } else if (this.user_direction === SOUTH) {
-                rotation_matrix = Mat4.rotation(-Math.PI / 2, 0, 1, 0);
-            }
-        } else if (direction === EAST) {
-            if (this.user_direction === WEST) {
-                rotation_matrix = Mat4.rotation(Math.PI, 0, 1, 0);
-            } else if (this.user_direction === NORTH) {
-                rotation_matrix = Mat4.rotation(-Math.PI / 2, 0, 1, 0);
-            } else if (this.user_direction === SOUTH) {
-                rotation_matrix = Mat4.rotation(Math.PI / 2, 0, 1, 0);
-            }
+            // event listener for mouse over to rotate user towards mouse position
+            let canvas = context.canvas;
+            const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
+                vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
+                    (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
+            canvas.addEventListener("mousemove", (e) => {
+                e.preventDefault();
+            
+                // get world space position
+                const rect = canvas.getBoundingClientRect();
+                let [pos_world_near, pos_world_far, center_world_near] = this.convertSStoWS(mouse_position(e), program_state);
+
+                // calculate the angle between user position and mouse position and update rotation
+                let angle = Math.atan2(pos_world_far[0] - this.user_x, pos_world_far[2] - this.user_z);
+                this.user_rotation = Mat4.rotation(angle, 0, 1, 0);
+            })
         }
 
-        return rotation_matrix.times(this.user_rotation);
-    }
+        // perspective
+        program_state.projection_transform = Mat4.perspective(
+            Math.PI / 4, context.width / context.height, 1, 100);
 
-    // get next rotation transformation based on current animation time
-    interpolateRotation(start_rotation, end_rotation, t, start_time, end_time) {
-        const factor = (t - start_time) / (end_time - start_time);
-        if (factor >= 1) return end_rotation;
+        // lights
+        const light_position = vec4(0, 5, 5, 1);
+        program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
-        const interpolated_rotation = start_rotation.map((row, rowIndex) =>
-            row.map((val, colIndex) => val + factor * (end_rotation[rowIndex][colIndex] - val))
-        );
-
-        return interpolated_rotation;
-    }
-
-    display(context, program_state) {
-        super.display(context, program_state);
-        const SCALE_AMT = 1.5
-        let model_transform = Mat4.identity();
+        // animation time
         const t = program_state.animation_time / 1000; // time in seconds
         this.time = t;
 
-        // rotate user
-        if (this.user_rotating) {
-            if (t < this.user_rotation_end_time) {
-                this.user_rotation = this.interpolateRotation(this.user_rotation, this.user_target_rotation, this.time, this.user_rotation_start_time, this.user_rotation_end_time);
-            } else {
-                this.user_rotation = this.user_target_rotation;
-                this.user_rotating = false;
-            }
-        }
-
-        // display user
+        // display models
+        let model_transform = Mat4.identity();
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
                                             .times(this.user_rotation)
                                             .times(this.user_global_transform);
