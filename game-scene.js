@@ -1,7 +1,7 @@
-import {defs, tiny, Subdivision_Sphere} from './examples/common.js';
-import { Shape_From_File } from './examples/obj-file-demo.js';
+import { defs, tiny } from './examples/common.js';
 import { Map } from './components/map.js';
 import { Tank } from './components/tank.js';
+import { Bullet } from './components/bullet.js';
 
 const {
     vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Scene, Texture
@@ -10,7 +10,6 @@ const {
 const { Textured_Phong } = defs;
 
 const BULLET_SPEED = 0.5;
-const MAX_BULLET_COLLISIONS = 2;
 const INITIAL_USER_X = 3;
 const INITIAL_USER_Z = 3;
 const INITIAL_USER_ROTATION = Mat4.identity();
@@ -38,20 +37,17 @@ export class GameScene extends Scene {
         this.cursor_z = 0;
 
         // bullets
-        this.animation_queue = [];
+        this.bullet_queue = [];
 
         // shapes
         this.shapes = {
-            tank: new Shape_From_File("assets/tank.obj"),
-            bullet: new Subdivision_Sphere(4),
             square: new defs.Square()
-
         };
 
         // materials
         this.materials = {
             plastic: new Material(new defs.Phong_Shader(),
-                {ambient: .4, diffusivity: .6, color: hex_color("#ffffff")}),
+                { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
             cursor: new Material(new Textured_Phong(), {
                 ambient: .4, diffusivity: .8, specularity: 0.1,
                 color: hex_color("#FFFFFF"),
@@ -63,14 +59,14 @@ export class GameScene extends Scene {
     make_control_panel() {
         // Up Movement (arrow key up)
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.direction.up = true},
-            "#6E6460", () => {this.direction.up = false});
-        this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.direction.down = true},
-            "#6E6460", () => {this.direction.down = false});
-        this.key_triggered_button("Move Left", ["ArrowLeft"], () => {this.direction.left = true},
-            "#6E6460", () => {this.direction.left = false});
-        this.key_triggered_button("Move Right", ["ArrowRight"], () => {this.direction.right = true},
-            "#6E6460", () => {this.direction.right = false});
+        this.key_triggered_button("Move Up", ["ArrowUp"], () => { this.direction.up = true },
+            "#6E6460", () => { this.direction.up = false });
+        this.key_triggered_button("Move Down", ["ArrowDown"], () => { this.direction.down = true },
+            "#6E6460", () => { this.direction.down = false });
+        this.key_triggered_button("Move Left", ["ArrowLeft"], () => { this.direction.left = true },
+            "#6E6460", () => { this.direction.left = false });
+        this.key_triggered_button("Move Right", ["ArrowRight"], () => { this.direction.right = true },
+            "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Next Level", ["l"], () => {
             if (this.level < 2) {
@@ -84,17 +80,17 @@ export class GameScene extends Scene {
     convertSStoWS(pos, program_state) {
         // 1. transform mouse position from screen space to normalized device coordinates (ndc)
         let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
-        let pos_ndc_far  = vec4(pos[0], pos[1], 1.0, 1.0);
+        let pos_ndc_far = vec4(pos[0], pos[1], 1.0, 1.0);
 
         // 2. transform ndc position to world space
         let P = program_state.projection_transform;
         let V = program_state.camera_inverse;
         let matrix = Mat4.inverse(P.times(V));
         let pos_world_near = matrix.times(pos_ndc_near);
-        let pos_world_far  = matrix.times(pos_ndc_far);
+        let pos_world_far = matrix.times(pos_ndc_far);
         pos_world_near.scale_by(1 / pos_world_near[3]);
         pos_world_far.scale_by(1 / pos_world_far[3]);
-        
+
         // 3. find intersection with the given plane (y = yWS)
         let t_ground = -pos_world_near[1] / (pos_world_far[1] - pos_world_near[1]);
         let t_cursor = (1.1 - pos_world_near[1]) / (pos_world_far[1] - pos_world_near[1]);
@@ -106,12 +102,12 @@ export class GameScene extends Scene {
 
     getMousePosition(e, rect) {
         return vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
-                   (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
+            (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
     }
 
     handleMouseMove(e, program_state, rect) {
         e.preventDefault();
-            
+
         // get world space position
         let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
 
@@ -133,40 +129,15 @@ export class GameScene extends Scene {
         let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state, 0);
         let angle = Math.atan2(pos_world_ground[0] - user_x, pos_world_ground[2] - user_z)
         let velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
-        // add animation bullet to queue
-        let animation_bullet = {
-            position: vec4(user_x, 1, user_z, 1),
-            angle: angle,
-            velocity: velocity,
-            numCollisions: 0
-        }
-        this.animation_queue.push(animation_bullet);
-    }
 
-    checkBulletCollision(bulletPosition) {
-        for (let block of this.map.blocks) {
-            const bulletMin = bulletPosition.minus(vec3(0.2, 0.2, 0.2)); // Adjust based on bullet size
-            const bulletMax = bulletPosition.plus(vec3(0.2, 0.2, 0.2));  // Adjust based on bullet size
-
-            const blockMin = block.position.minus(vec3(block.size * 0.5, block.size *0.5, block.size *0.5));
-            const blockMax = block.position.plus(vec3(block.size *0.5, block.size *0.5, block.size *0.5));
-
-            const xOverlap = bulletMin[0] <= blockMax[0] && bulletMax[0] >= blockMin[0];
-            const yOverlap = bulletMin[1] <= blockMax[1] && bulletMax[1] >= blockMin[1];
-            const zOverlap = bulletMin[2] <= blockMax[2] && bulletMax[2] >= blockMin[2];
-
-            if (xOverlap && yOverlap && zOverlap) {
-                // Determine the normal vector of the collision
-                let normal = vec3(0, 0, 0);
-                if (Math.abs(bulletPosition[0] - block.position[0]) > Math.abs(bulletPosition[2] - block.position[2])) {
-                    normal[0] = Math.sign(bulletPosition[0] - block.position[0]);
-                } else {
-                    normal[2] = Math.sign(bulletPosition[2] - block.position[2]);
-                }
-                return {block: block, normal: normal};
-            }
-        }
-        return null; // No collision
+        // add bullet to animation queue
+        let bullet = new Bullet(
+            vec4(user_x, 1, user_z, 1),
+            angle,
+            velocity,
+            this.map.blocks
+        )
+        this.bullet_queue.push(bullet);
     }
 
     display(context, program_state) {
@@ -176,7 +147,7 @@ export class GameScene extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
 
             // initialize global camera and projection matrices
-            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI/(2.5), 1, 0, 0)));
+            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI / (2.5), 1, 0, 0)));
 
             // initialize event listeners
             let canvas = context.canvas;
@@ -203,8 +174,8 @@ export class GameScene extends Scene {
 
         // user cursor
         let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 1.1, this.cursor_z))
-                                              .times(Mat4.rotation(Math.PI, 0, 1, 0))
-                                              .times(Mat4.rotation(Math.PI / 2, 1, 0, 0));
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.rotation(Math.PI / 2, 1, 0, 0));
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
         // user tank
@@ -224,35 +195,13 @@ export class GameScene extends Scene {
         this.user.updatePosition(this.map.blocks, this.direction, new_x, new_z);
         this.user.render(context, program_state);
 
-        // animate bullets
-        if (this.animation_queue.length > 0) {
-            for (let i = this.animation_queue.length - 1; i >= 0; i--) {
-                let bullet = this.animation_queue[i];
-                bullet.position = bullet.position.plus(bullet.velocity);
-
-                // Check for collision with blocks
-                let collision = this.checkBulletCollision(bullet.position.to3());
-                if (collision) {
-                    let normal = collision.normal;
-                    let velocity = bullet.velocity;
-                    let dotProduct = velocity.dot(normal);
-                    bullet.velocity = velocity.minus(normal.times(2 * dotProduct));
-                    bullet.numCollisions += 1;
-                }
-
-                // render bullet
-                let bullet_transformation = Mat4.translation(bullet.position[0], 0, bullet.position[2])
-                                                .times(Mat4.scale(0.5, 0.5, 0.5));
-                this.shapes.bullet.draw(context, program_state, bullet_transformation, this.materials.plastic);
-
-                // remove bullet if out of bounds or numCollisions > 2
-                if (bullet.position[0] < -50 || 
-                    bullet.position[0] > 50 || 
-                    bullet.position[2] < -50 || 
-                    bullet.position[2] > 50) {
-                    this.animation_queue.splice(i, 1);
-                } else if (bullet.numCollisions > MAX_BULLET_COLLISIONS) {
-                    this.animation_queue.splice(i, 1);
+        // bullets
+        if (this.bullet_queue.length > 0) {
+            for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
+                let result = this.bullet_queue[i].render(context, program_state);
+                if (!result) {
+                    delete this.bullet_queue[i]; // cleanup bullet
+                    this.bullet_queue.splice(i, 1);
                 }
             }
         }

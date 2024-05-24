@@ -19,8 +19,6 @@ export class Map {
 
         // *** Materials
         this.materials = {
-            // block: new Material(new defs.Phong_Shader(),
-            //     {ambient: .4, diffusivity: .8, specularity: 0.1, color: hex_color("#e1cb8d")}),
             block1: new Material(new Textured_Phong(), {
                 ambient: .35, diffusivity: .8, specularity: 0.1,
                 color: hex_color("#D9AD89"),
@@ -87,8 +85,8 @@ export class Map {
 
         // draw background
         let background_transform = model_transform.times(Mat4.translation(16, -1, 15))
-                                                  .times(Mat4.rotation(-Math.PI/2, 1, 0, 0))
-                                                  .times(Mat4.scale(50, 30, 1))
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.scale(50, 30, 1))
         this.shapes.background.draw(context, program_state, background_transform, this.backgroundMaterial)
 
         // draw blocks
@@ -99,7 +97,7 @@ export class Map {
                 // if current character is a BLOCK
                 if (level[curr_index] === '1') {
                     let block_position = model_transform.times(vec4(0, 0, 0, 1));
-                    this.blocks.push({position: block_position.to3(), size: BLOCK_SIZE});
+                    this.blocks.push({ position: block_position.to3(), size: BLOCK_SIZE });
                     this.shapes.block.draw(context, program_state, model_transform, this.blockMaterials[i][j]);
                     model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform);
                 }
