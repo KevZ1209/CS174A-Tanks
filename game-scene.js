@@ -13,7 +13,7 @@ export class GameScene extends Scene {
 
         // map
         this.map = new Map();
-        
+
         // player movement
         this.user_x = 2;
         this.user_z = 2;
@@ -92,7 +92,7 @@ export class GameScene extends Scene {
                     (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
             canvas.addEventListener("mousemove", (e) => {
                 e.preventDefault();
-            
+
                 // get world space position
                 const rect = canvas.getBoundingClientRect();
                 let [pos_world_near, pos_world_far, center_world_near] = this.convertSStoWS(mouse_position(e), program_state);
@@ -132,10 +132,11 @@ export class GameScene extends Scene {
         }
 
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
-                                            .times(this.user_rotation)
-                                            .times(this.user_global_transform);
+            .times(this.user_rotation)
+            .times(this.user_global_transform);
         this.shapes.tank.draw(context, program_state, user_transform, this.materials.plastic.override({color: hex_color("#6A9956")}));
 
     }
 }
+
 
