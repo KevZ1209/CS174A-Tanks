@@ -21,6 +21,8 @@ export class GameScene extends Scene {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
+        this.initialized = false;
+
         // player movement
         this.user = new Tank(INITIAL_USER_X, INITIAL_USER_Z, INITIAL_USER_ANGLE, TANK_TYPE_ENUM.USER);
         this.direction = {
@@ -59,13 +61,16 @@ export class GameScene extends Scene {
 
     make_control_panel() {
         // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
-        this.key_triggered_button("Move Up", ["ArrowUp"], () => { this.direction.up = true },
+        this.key_triggered_button("Move Up", ["w"], () => { this.direction.up = true },
             "#6E6460", () => { this.direction.up = false });
-        this.key_triggered_button("Move Down", ["ArrowDown"], () => { this.direction.down = true },
+        this.new_line();
+        this.key_triggered_button("Move Down", ["s"], () => { this.direction.down = true },
             "#6E6460", () => { this.direction.down = false });
-        this.key_triggered_button("Move Left", ["ArrowLeft"], () => { this.direction.left = true },
+        this.new_line();
+        this.key_triggered_button("Move Left", ["a"], () => { this.direction.left = true },
             "#6E6460", () => { this.direction.left = false });
-        this.key_triggered_button("Move Right", ["ArrowRight"], () => { this.direction.right = true },
+        this.new_line();
+        this.key_triggered_button("Move Right", ["d"], () => { this.direction.right = true },
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Next Level", ["l"], () => {
@@ -142,9 +147,9 @@ export class GameScene extends Scene {
 
     display(context, program_state) {
         // ** Setup ** This part sets up the scene's overall camera matrix, projection matrix, and lights:
-        if (!context.scratchpad.controls) {
-            // initialize movement controls
-            this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
+        if (!this.initialized) {
+            // flag initialized
+            this.initialized = true;
 
             // initialize global camera and projection matrices
             program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI / (2.5), 1, 0, 0)));
@@ -157,7 +162,7 @@ export class GameScene extends Scene {
             // remove default cursor
             canvas.style.cursor = "none";
 
-            // TESTING ONLY
+            // initialize level 0
             this.map.initializeLevel(0);
         }
 
