@@ -6,6 +6,8 @@ const {
     Vector, Vector3, vec, vec3, vec4, color, hex_color, Matrix, Mat4, Light, Shape, Material, Scene,
 } = tiny;
 
+const BULLET_SPEED = 0.1;
+
 export class GameScene extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
@@ -22,7 +24,7 @@ export class GameScene extends Scene {
         // global positioning
         this.user_global_transform =  Mat4.identity();
 
-        // animation queue
+        // bullets
         this.animation_queue = [];
 
         // shapes
@@ -114,11 +116,8 @@ export class GameScene extends Scene {
 
         // add animation bullet to queue
         let animation_bullet = {
-            from: vec4(this.user_x, 0, this.user_z, 1),
-            to: pos_world_far,
+            position: vec4(this.user_x, 0, this.user_z, 1),
             angle: Math.atan2(pos_world_far[0] - this.user_x, pos_world_far[2] - this.user_z),
-            start_time: program_state.animation_time,
-            end_time: program_state.animation_time + 5000 // 5 seconds
         }
         console.log(animation_bullet);
         this.animation_queue.push(animation_bullet);
@@ -164,18 +163,25 @@ export class GameScene extends Scene {
         if (this.animation_queue.length > 0) {
             for (let i = 0; i < this.animation_queue.length; i++) {
                 let bullet = this.animation_queue[i];
-                let animation_process = (t - bullet.start_time) / (bullet.end_time - bullet.start_time);
-                let position = bullet.to.times(animation_process).plus(bullet.from.times(1 - animation_process));
-
-                let bullet_transformation = Mat4.translation(position[0], 0, position[2]).times(Mat4.scale(0.5, 0.5, 0.5));
+                let position = bullet.position.plus(vec4(Math.sin(bullet.angle) * BULLET_SPEED, 
+                                                         0, 
+                                                         Math.cos(bullet.angle) * BULLET_SPEED,
+                                                         0));
+                this.animation_queue[i].position = position; // update bullet with new position
+                let bullet_transformation = Mat4.translation(position[0], 0, position[2])
+                                                .times(Mat4.scale(0.5, 0.5, 0.5));
                 this.shapes.bullet.draw(context, program_state, bullet_transformation, this.materials.plastic);
             }
         }
 
         // remove finished bullets
         while (this.animation_queue.length > 0) {
-            if (t > this.animation_queue[0].end_time) {
-                this.animation_queue.shift();
+            console.log(this.animation_queue[0].position)
+            if (this.animation_queue[0].position[0] < -50 || 
+                this.animation_queue[0].position[0] > 50 || 
+                this.animation_queue[0].position[2] < -50 || 
+                this.animation_queue[0].position[2] > 50) {
+                    this.animation_queue.shift();
             } else {
                 break;
             }
