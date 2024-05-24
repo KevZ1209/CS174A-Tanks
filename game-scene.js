@@ -10,6 +10,8 @@ const { Textured_Phong } = defs;
 
 const BULLET_SPEED = 0.5;
 const MAX_BULLET_COLLISIONS = 2;
+const INITIAL_USER_X = 3;
+const INITIAL_USER_Z = 3;
 
 export class GameScene extends Scene {
     constructor() {
@@ -18,10 +20,11 @@ export class GameScene extends Scene {
 
         // map
         this.map = new Map();
+        this.level = 0;
 
         // player movement
-        this.user_x = 3;
-        this.user_z = 3;
+        this.user_x = INITIAL_USER_X;
+        this.user_z = INITIAL_USER_Z;
         this.user_rotation = Mat4.identity();
 
         this.up = false;
@@ -67,6 +70,13 @@ export class GameScene extends Scene {
         this.key_triggered_button("Move Right", ["ArrowRight"], () => {this.right = true},
             "#6E6460", () => {this.right = false});
         this.new_line();
+        this.key_triggered_button("Next Level", ["l"], () => {
+            if (this.level < 2) {
+                this.level += 1;
+                this.user_x = INITIAL_USER_X;
+                this.user_z = INITIAL_USER_Z;
+            }
+        })
     }
 
     // convert screen space position to world space position
@@ -148,7 +158,7 @@ export class GameScene extends Scene {
         }
         return false; // No collision
     }
-ds
+
     checkBulletCollision(bulletPosition) {
         for (let block of this.map.blocks) {
             const bulletMin = bulletPosition.minus(vec3(0.2, 0.2, 0.2)); // Adjust based on bullet size
@@ -200,7 +210,7 @@ ds
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
 
             // initialize global camera and projection matrices
-            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI/3, 1, 0, 0)));
+            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI/(2.5), 1, 0, 0)));
 
             // initialize event listeners
             let canvas = context.canvas;
@@ -223,7 +233,7 @@ ds
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
         // map
-        this.map.renderLevel(context, program_state, 2);
+        this.map.renderLevel(context, program_state, this.level);
 
         // user tank
         let model_transform = Mat4.identity();
