@@ -26,9 +26,6 @@ export class GameScene extends Scene {
         this.right = false;
         this.left = false;
 
-        // global positioning
-        this.user_global_transform =  Mat4.identity();
-
         // bullets
         this.animation_queue = [];
 
@@ -63,7 +60,7 @@ export class GameScene extends Scene {
     convertSStoWS(pos, program_state) {
         // 1. transform mouse position from screen space to normalized device coordinates (ndc)
         let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
-        let pos_ndc_far  = vec4(pos[0], pos[1],  1.0, 1.0);
+        let pos_ndc_far  = vec4(pos[0], pos[1], 1.0, 1.0);
         let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
 
         // 2. transform ndc position to world space
@@ -75,8 +72,12 @@ export class GameScene extends Scene {
         pos_world_near.scale_by(1 / pos_world_near[3]);
         pos_world_far.scale_by(1 / pos_world_far[3]);
         center_world_near.scale_by(1 / center_world_near[3]);
+        
+        // 3. find intersection with the ground plane (y = 0)
+        let t = -pos_world_near[1] / (pos_world_far[1] - pos_world_near[1]);
+        let pos_world_ground = pos_world_near.plus(pos_world_far.minus(pos_world_near).times(t));
 
-        return [pos_world_near, pos_world_far, center_world_near];
+        return pos_world_ground;
     }
 
     getMousePosition(e, rect) {
@@ -88,10 +89,10 @@ export class GameScene extends Scene {
         e.preventDefault();
             
         // get world space position
-        let [pos_world_near, pos_world_far, center_world_near] = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
+        let pos_world_ground = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
 
         // calculate the angle between user position and mouse position and update rotation
-        let angle = Math.atan2(pos_world_far[0] - this.user_x, pos_world_far[2] - this.user_z);
+        let angle = Math.atan2(pos_world_ground[0] - this.user_x, pos_world_ground[2] - this.user_z);
         this.user_rotation = Mat4.rotation(angle, 0, 1, 0);
     }
 
@@ -99,12 +100,12 @@ export class GameScene extends Scene {
         e.preventDefault();
 
         // get world space position
-        let [pos_world_near, pos_world_far, center_world_near] = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
+        let pos_world_ground = this.convertSStoWS(this.getMousePosition(e, rect), program_state);
 
         // add animation bullet to queue
         let animation_bullet = {
-            position: vec4(this.user_x, 0, this.user_z, 1),
-            angle: Math.atan2(pos_world_far[0] - this.user_x, pos_world_far[2] - this.user_z),
+            position: vec4(this.user_x, 1, this.user_z, 1),
+            angle: Math.atan2(pos_world_ground[0] - this.user_x, pos_world_ground[2] - this.user_z),
         }
         this.animation_queue.push(animation_bullet);
     }
@@ -156,8 +157,7 @@ export class GameScene extends Scene {
         }
 
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
-            .times(this.user_rotation)
-            .times(this.user_global_transform);
+                                            .times(this.user_rotation);
         this.shapes.tank.draw(context, program_state, user_transform, this.materials.plastic.override({color: hex_color("#6A9956")}));
 
         // animate bullets
