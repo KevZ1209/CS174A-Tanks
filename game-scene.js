@@ -14,6 +14,8 @@ const INITIAL_USER_X = 3;
 const INITIAL_USER_Z = 3;
 const INITIAL_USER_ROTATION = Mat4.identity();
 const USER_TANK_COLOR = "#0F65DE";
+const INITIAL_CURSOR_X = -10;
+const INITIAL_CURSOR_Z = -10;
 
 export class GameScene extends Scene {
     constructor() {
@@ -33,8 +35,8 @@ export class GameScene extends Scene {
             left: false
         }
 
-        this.cursor_x = 0;
-        this.cursor_z = 0;
+        this.cursor_x = INITIAL_CURSOR_X;
+        this.cursor_z = INITIAL_CURSOR_Z;
 
         // bullets
         this.bullet_queue = [];
@@ -135,7 +137,7 @@ export class GameScene extends Scene {
             vec4(user_x, 1, user_z, 1),
             angle,
             velocity,
-            this.map.blocks
+            this.map.collisionMap
         )
         this.bullet_queue.push(bullet);
     }
@@ -192,7 +194,7 @@ export class GameScene extends Scene {
         if (this.direction.left) {
             new_x -= 0.2;
         }
-        this.user.updatePosition(this.map.blocks, this.direction, new_x, new_z);
+        this.user.updatePosition(this.map.collisionMap, this.direction, new_x, new_z);
         this.user.render(context, program_state);
 
         // bullets

@@ -17,39 +17,24 @@ export class Map {
             background: new defs.Square()
         };
 
-        // *** Materials
-        this.materials = {
-            block1: new Material(new Textured_Phong(), {
-                ambient: .35, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D9AD89"),
-                texture: new Texture("assets/wood1.jpg")
-            }),
-            block2: new Material(new Textured_Phong(), {
-                ambient: .35, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D9AD89"),
-                texture: new Texture("assets/wood2.jpg")
-            }),
-            block3: new Material(new Textured_Phong(), {
-                ambient: .35, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D9AD89"),
-                texture: new Texture("assets/wood3.jpg")
-            }),
-            block4: new Material(new Textured_Phong(), {
-                ambient: .35, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D9AD89"),
-                texture: new Texture("assets/wood4.jpg")
-            }),
-            block5: new Material(new Textured_Phong(), {
-                ambient: .35, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D9AD89"),
-                texture: new Texture("assets/wood5.jpg")
-            }),
-            block6: new Material(new Textured_Phong(), {
-                ambient: .35, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D9AD89"),
-                texture: new Texture("assets/wood6.jpg")
-            })
-        };
+        this.materials = []
+        this.files = [
+            "assets/wood1.jpg",
+            "assets/wood2.jpg",
+            "assets/wood3.jpg",
+            "assets/wood4.jpg",
+            "assets/wood5.jpg",
+            "assets/wood6.jpg"
+        ];
+        for (let file of this.files) {
+            this.materials.push(
+                new Material(new Textured_Phong(), {
+                    ambient: .35, diffusivity: .8, specularity: 0.1,
+                    color: hex_color("#D9AD89"),
+                    texture: new Texture(file)
+                })
+            );
+        }
 
         this.backgroundMaterial = new Material(new Textured_Phong(), {
             ambient: .4, diffusivity: .8, specularity: 0.1,
@@ -58,7 +43,7 @@ export class Map {
         })
 
         this.blockMaterials = [];
-        this.blocks = []; // Add this line
+        this.collisionMap = [];
         this.initializeBlockMaterials()
     }
 
@@ -66,9 +51,8 @@ export class Map {
         for (let i = 0; i < LEVEL_HEIGHT; i++) {
             this.blockMaterials[i] = [];
             for (let j = 0; j < LEVEL_WIDTH; j++) {
-                const materials = Object.values(this.materials);
-                let index = Math.floor(Math.random() * materials.length);
-                this.blockMaterials[i][j] = materials[index];
+                let index = Math.floor(Math.random() * this.materials.length);
+                this.blockMaterials[i][j] = this.materials[index];
             }
         }
     }
@@ -97,7 +81,7 @@ export class Map {
                 // if current character is a BLOCK
                 if (level[curr_index] === '1') {
                     let block_position = model_transform.times(vec4(0, 0, 0, 1));
-                    this.blocks.push({ position: block_position.to3(), size: BLOCK_SIZE });
+                    this.collisionMap.push({ position: block_position.to3(), size: BLOCK_SIZE });
                     this.shapes.block.draw(context, program_state, model_transform, this.blockMaterials[i][j]);
                     model_transform = Mat4.translation(BLOCK_SIZE, 0, 0).times(model_transform);
                 }
