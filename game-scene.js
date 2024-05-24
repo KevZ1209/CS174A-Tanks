@@ -15,11 +15,16 @@ export class GameScene extends Scene {
 
         // map
         this.map = new Map();
-        
+
         // player movement
         this.user_x = 2;
         this.user_z = 2;
         this.user_rotation = Mat4.identity();
+
+        this.up = false;
+        this.down = false;
+        this.right = false;
+        this.left = false;
 
         // global positioning
         this.user_global_transform =  Mat4.identity();
@@ -42,31 +47,16 @@ export class GameScene extends Scene {
 
     make_control_panel() {
         // Up Movement (arrow key up)
-        this.key_triggered_button("Up", ['ArrowUp'], () => {
-            if(!(this.paused)){
-                this.user_z -= 1;
-            }
-        });
-        // Down Movement (arrow key down)
-        this.key_triggered_button("Down", ['ArrowDown'], () => {
-            if(!(this.paused)){
-                this.user_z += 1; 
-            }
-        });
-        
-        // Left Movement (arrow key left)
-        this.key_triggered_button("Left", ['ArrowLeft'], () => {
-            if(!(this.paused)){
-                this.user_x -= 1; 
-            }
-        });
-
-        // Right Movement (arrow key right)
-        this.key_triggered_button("Right", ['ArrowRight'], () => {
-            if(!(this.paused)){
-                this.user_x += 1;
-            } 
-        });
+        // Draw the scene's buttons, setup their actions and keyboard shortcuts, and monitor live measurements.
+        this.key_triggered_button("Move Up", ["ArrowUp"], () => {this.up = true},
+            "#6E6460", () => {this.up = false});
+        this.key_triggered_button("Move Down", ["ArrowDown"], () => {this.down = true},
+            "#6E6460", () => {this.down = false});
+        this.key_triggered_button("Move Left", ["ArrowLeft"], () => {this.left = true},
+            "#6E6460", () => {this.left = false});
+        this.key_triggered_button("Move Right", ["ArrowRight"], () => {this.right = true},
+            "#6E6460", () => {this.right = false});
+        this.new_line();
     }
 
     // convert screen space position to world space position
@@ -86,9 +76,6 @@ export class GameScene extends Scene {
         pos_world_far.scale_by(1 / pos_world_far[3]);
         center_world_near.scale_by(1 / center_world_near[3]);
 
-        // console.log("near: ", pos_world_near);
-        // console.log("far: ", pos_world_far);
-        // console.log("center: ", center_world_near);
         return [pos_world_near, pos_world_far, center_world_near];
     }
 
@@ -119,7 +106,6 @@ export class GameScene extends Scene {
             position: vec4(this.user_x, 0, this.user_z, 1),
             angle: Math.atan2(pos_world_far[0] - this.user_x, pos_world_far[2] - this.user_z),
         }
-        console.log(animation_bullet);
         this.animation_queue.push(animation_bullet);
     }
 
@@ -154,9 +140,24 @@ export class GameScene extends Scene {
 
         // user tank
         let model_transform = Mat4.identity();
+
+        // MOVING_THING STUFF...
+        if (this.up === true) {
+            this.user_z -= 0.2;
+        }
+        if (this.down === true) {
+            this.user_z += 0.2;
+        }
+        if (this.right === true) {
+            this.user_x += 0.2;
+        }
+        if (this.left === true) {
+            this.user_x -= 0.2;
+        }
+
         let user_transform = model_transform.times(Mat4.translation(this.user_x, 0, this.user_z))
-                                            .times(this.user_rotation)
-                                            .times(this.user_global_transform);
+            .times(this.user_rotation)
+            .times(this.user_global_transform);
         this.shapes.tank.draw(context, program_state, user_transform, this.materials.plastic.override({color: hex_color("#6A9956")}));
 
         // animate bullets
@@ -176,7 +177,6 @@ export class GameScene extends Scene {
 
         // remove finished bullets
         while (this.animation_queue.length > 0) {
-            console.log(this.animation_queue[0].position)
             if (this.animation_queue[0].position[0] < -50 || 
                 this.animation_queue[0].position[0] > 50 || 
                 this.animation_queue[0].position[2] < -50 || 
@@ -189,4 +189,5 @@ export class GameScene extends Scene {
 
     }
 }
+
 
