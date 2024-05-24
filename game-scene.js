@@ -7,6 +7,7 @@ const {
 } = tiny;
 
 const BULLET_SPEED = 0.5;
+const MAX_BULLET_COLLISIONS = 2;
 
 export class GameScene extends Scene {
     constructor() {
@@ -108,6 +109,7 @@ export class GameScene extends Scene {
             position: vec4(this.user_x, 1, this.user_z, 1),
             angle: angle,
             velocity: velocity,
+            numCollisions: 0
         }
         this.animation_queue.push(animation_bullet);
     }
@@ -232,7 +234,7 @@ ds
 
         // animate bullets
         if (this.animation_queue.length > 0) {
-            for (let i = 0; i < this.animation_queue.length; i++) {
+            for (let i = this.animation_queue.length - 1; i >= 0; i--) {
                 let bullet = this.animation_queue[i];
                 bullet.position = bullet.position.plus(bullet.velocity);
 
@@ -243,25 +245,25 @@ ds
                     let velocity = bullet.velocity;
                     let dotProduct = velocity.dot(normal);
                     bullet.velocity = velocity.minus(normal.times(2 * dotProduct));
+                    bullet.numCollisions += 1;
                 }
+
+                // render bullet
                 let bullet_transformation = Mat4.translation(bullet.position[0], 0, bullet.position[2])
                                                 .times(Mat4.scale(0.5, 0.5, 0.5));
                 this.shapes.bullet.draw(context, program_state, bullet_transformation, this.materials.plastic);
+
+                // remove bullet if out of bounds or numCollisions > 2
+                if (bullet.position[0] < -50 || 
+                    bullet.position[0] > 50 || 
+                    bullet.position[2] < -50 || 
+                    bullet.position[2] > 50) {
+                    this.animation_queue.splice(i, 1);
+                } else if (bullet.numCollisions > MAX_BULLET_COLLISIONS) {
+                    this.animation_queue.splice(i, 1);
+                }
             }
         }
-
-        // remove finished bullets
-        while (this.animation_queue.length > 0) {
-            if (this.animation_queue[0].position[0] < -50 || 
-                this.animation_queue[0].position[0] > 50 || 
-                this.animation_queue[0].position[2] < -50 || 
-                this.animation_queue[0].position[2] > 50) {
-                    this.animation_queue.shift();
-            } else {
-                break;
-            }
-        }
-
     }
 }
 
