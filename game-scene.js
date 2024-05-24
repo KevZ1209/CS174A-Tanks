@@ -117,7 +117,7 @@ export class GameScene extends Scene {
             this.children.push(context.scratchpad.controls = new defs.Movement_Controls());
 
             // initialize global camera and projection matrices
-            program_state.set_camera(Mat4.translation(-18, 15, -44).times(Mat4.rotation(Math.PI/2, 1, 0, 0)));
+            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI/3, 1, 0, 0)));
 
             // initialize event listeners
             let canvas = context.canvas;
@@ -133,7 +133,7 @@ export class GameScene extends Scene {
             Math.PI / 4, context.width / context.height, 1, 100);
 
         // lights
-        const light_position = vec4(0, 5, 5, 1);
+        const light_position = vec4(16, 20, 10, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
         // map
