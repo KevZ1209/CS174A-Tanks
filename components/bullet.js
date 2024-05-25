@@ -6,6 +6,7 @@ const { vec3, hex_color, Mat4, Material, color, Texture } = tiny;
 const { Textured_Phong } = defs;
 
 const BULLET_SCALE = 0.5;
+const BULLET_SPHERE_SCALE = 0.25;
 const BULLET_WIDTH = 0.3;
 const BULLET_HEIGHT = 0.3;
 const BULLET_DEPTH = 0.3;
@@ -14,12 +15,12 @@ const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 
 const PARTICLE_SPAWN_RATE = 0.001;
-const PARTICLE_LIFETIME = 1;
+const PARTICLE_LIFETIME = 0.7;
 const PARTICLE_INITIAL_SCALE = 0.2;
-const PARTICLE_MAX_SCALE = .8;
+const PARTICLE_MAX_SCALE = .5;
 const PARTICLE_INITIAL_OPACITY = 0.3; // 0.4
 const PARTICLE_MAX_OPACITY = 0.4; // 0.46
-const PARTICLE_OFFSET = 1;
+const PARTICLE_OFFSET = 0.3;
 
 export class Bullet {
   constructor(initial_position, angle, initial_velocity, collisionMap) {
@@ -133,7 +134,7 @@ export class Bullet {
 
     // draw bullet
     let model_transform = Mat4.translation(this.position[0], 0, this.position[2])
-      .times(Mat4.scale(BULLET_SCALE, BULLET_SCALE, BULLET_SCALE));
+      .times(Mat4.scale(BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE));
     this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
 
     // draw smoke

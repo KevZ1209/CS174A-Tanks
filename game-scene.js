@@ -10,6 +10,7 @@ const {
 const { Textured_Phong } = defs;
 
 const BULLET_SPEED = 0.3;
+const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
 const INITIAL_USER_X = -10;
 const INITIAL_USER_Z = -10;
 const INITIAL_USER_ANGLE = Math.PI / 2;
@@ -147,7 +148,7 @@ export class GameScene extends Scene {
 
         // add bullet to animation queue
         let bullet = new Bullet(
-            vec4(user_x, 1, user_z, 1),
+            vec4(user_x + BULLET_OFFSET * Math.sin(angle), 1, user_z + BULLET_OFFSET * Math.cos(angle), 1),
             angle,
             velocity,
             this.map.collisionMap
