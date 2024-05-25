@@ -156,7 +156,7 @@ export class GameScene extends Scene {
         this.bullet_queue.push(bullet);
 
         this.clip--;
-        this.last_reload_time = t
+        // this.last_reload_time = t;
     }
 
     display(context, program_state) {
@@ -182,7 +182,7 @@ export class GameScene extends Scene {
 
         // ** Render ** display all set perspective, lights, and models in the scene
         const t = program_state.animation_time;
-
+        const dt = program_state.animation_delta_time / 1000;
         // perspective
         program_state.projection_transform = Mat4.perspective(
             Math.PI / 4, context.width / context.height, 1, 100);
@@ -220,6 +220,8 @@ export class GameScene extends Scene {
         // bullets
         if (this.bullet_queue.length > 0) {
             for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
+                let bullet = this.bullet_queue[i];
+                bullet.update(dt);
                 let result = this.bullet_queue[i].render(context, program_state);
                 if (!result) {
                     this.bullet_queue.splice(i, 1); // Remove the bullet from the queue
