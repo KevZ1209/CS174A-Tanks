@@ -2,7 +2,7 @@ import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
 import { Particle } from "./particle.js";
 
-const { vec3, hex_color, Mat4, Material, color, Texture } = tiny;
+const { vec3, vec4, hex_color, Mat4, Material, color, Texture } = tiny;
 const { Textured_Phong } = defs;
 
 const BULLET_SCALE = 0.5;
