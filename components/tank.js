@@ -8,6 +8,8 @@ const TANK_SCALE = 0.9;
 const TANK_WIDTH = 0.5;
 const TANK_HEIGHT = 1;
 const TANK_DEPTH = 0.5;
+const MAX_CLIP_SIZE = 4;
+const RELOAD_TIME = 2500;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -35,6 +37,8 @@ class Tank {
     this.map = map;
     this.type = type;
     this.bombActive = false;
+    this.clip = MAX_CLIP_SIZE;
+    this.last_reload_time = 0;
 
     this.material = new Material(new defs.Phong_Shader(),
       { ambient: .4, diffusivity: .6, color: type.color }
@@ -46,6 +50,17 @@ class Tank {
     let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
       .times(Mat4.rotation(this.angle, 0, 1, 0));
     this.shape.draw(context, program_state, model_transform, this.material);
+
+    const t = program_state.animation_time;
+    const dt = program_state.animation_delta_time / 1000;
+
+    // reload bullets
+    if(this.clip >= MAX_CLIP_SIZE) {
+      this.last_reload_time = t
+    } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
+      this.clip++;
+      this.last_reload_time = t;
+    }
   }
 
   updatePosition(new_x, new_z, direction = null) {

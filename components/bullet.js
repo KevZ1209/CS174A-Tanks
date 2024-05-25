@@ -1,7 +1,9 @@
 import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
+import { Particle } from "./particle.js";
 
-const { vec3, hex_color, Mat4, Material } = tiny;
+const { vec3, hex_color, Mat4, Material, color, Texture } = tiny;
+const { Textured_Phong } = defs;
 
 const BULLET_SCALE = 0.5;
 const BULLET_WIDTH = 0.3;
@@ -11,6 +13,14 @@ const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 
+const PARTICLE_SPAWN_RATE = 0.001;
+const PARTICLE_LIFETIME = 1;
+const PARTICLE_INITIAL_SCALE = 0.2;
+const PARTICLE_MAX_SCALE = .8;
+const PARTICLE_INITIAL_OPACITY = 0.3; // 0.4
+const PARTICLE_MAX_OPACITY = 0.4; // 0.46
+const PARTICLE_OFFSET = 1;
+
 export class Bullet {
   constructor(initial_position, angle, initial_velocity, collisionMap) {
     this.position = initial_position;
@@ -19,13 +29,79 @@ export class Bullet {
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
     this.invinciblity = 0;
-    this.shape = new Subdivision_Sphere(4);
-    this.material = new Material(new defs.Phong_Shader(), { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") });
+    this.shapes = {
+      bullet: new Subdivision_Sphere(4),
+      sphere: new Subdivision_Sphere(3),
+    };
+
+    // smoke
+    this.particles = [];
+    this.particleSpawnRate = PARTICLE_SPAWN_RATE;
+    this.timeSinceLastSpawn = 0;
+
+    this.materials = {
+      bulletMaterial: new Material(new defs.Phong_Shader(), {
+        ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+      }),
+      smoke: new Material(new defs.Phong_Shader(), {
+        ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
+      }),
+      smokeCloud: new Material(new Textured_Phong(), {
+        ambient: .35, diffusivity: .8, specularity: 0.1,
+        color: hex_color("#d2d0d0"),
+        texture: new Texture("../assets/smoke_trail.png")
+      })
+    };
+  }
+
+  update(dt) {
+    this.position = this.position.plus(this.velocity.times(dt));
+    this.timeSinceLastSpawn += dt;
+
+    // Spawn new particles
+    if (this.timeSinceLastSpawn > this.particleSpawnRate) {
+      this.spawnParticle();
+      this.timeSinceLastSpawn = 0;
+    }
+
+    // Update particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (this.particles[i].isDead()) {
+        this.particles.splice(i, 1);
+      }
+    }
+
+    // Check for collisions
+    // (Implement collision detection and handling)
+  }
+
+  spawnParticle() {
+    const particlePosition = this.position.plus(vec3(
+        (Math.random() - 0.5) * PARTICLE_OFFSET,
+        0,
+        (Math.random() - 0.5) * PARTICLE_OFFSET
+    ));
+
+    const particleVelocity = vec3(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05);
+    const particle = new Particle(
+        particlePosition,
+        particleVelocity,
+        PARTICLE_LIFETIME,
+        PARTICLE_INITIAL_SCALE,
+        PARTICLE_MAX_SCALE,
+        PARTICLE_INITIAL_OPACITY,
+        PARTICLE_MAX_OPACITY,
+    );
+    this.particles.push(particle);
   }
 
   // returns true if bullet was successfully rendered
   // returns false if bullet was not rendered and should be deleted from animation queue
   render(context, program_state) {
+    const dt = program_state.animation_delta_time / 1000;
+    this.update(dt);
+    
     // update position
     this.position = this.position.plus(this.velocity);
 
@@ -58,7 +134,15 @@ export class Bullet {
     // draw bullet
     let model_transform = Mat4.translation(this.position[0], 0, this.position[2])
       .times(Mat4.scale(BULLET_SCALE, BULLET_SCALE, BULLET_SCALE));
-    this.shape.draw(context, program_state, model_transform, this.material);
+    this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+
+    // draw smoke
+    for (const particle of this.particles) {
+      const particle_transform = Mat4.translation(particle.position[0], particle.position[1], particle.position[2])
+          .times(Mat4.scale(particle.scale, particle.scale, particle.scale)); // Adjust particle size
+      const particleMaterial = this.materials.smoke.override({ color: color(0.4, 0.4, 0.4, particle.opacity) });
+      this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
+    }
     return true;
   }
 

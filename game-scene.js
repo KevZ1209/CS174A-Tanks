@@ -1,10 +1,10 @@
-import { defs, tiny } from './examples/common.js';
+import { defs, tiny, Subdivision_Sphere } from './examples/common.js';
 import { Map } from './components/map.js';
 import { Tank, TANK_TYPE_ENUM } from './components/tank.js';
 import { Bullet } from './components/bullet.js';
 
 const {
-    vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Scene, Texture
+    vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Scene, Texture,
 } = tiny;
 
 const { Textured_Phong } = defs;
@@ -44,7 +44,8 @@ export class GameScene extends Scene {
 
         // shapes
         this.shapes = {
-            square: new defs.Square()
+            square: new defs.Square(),
+            ammo: new Subdivision_Sphere(4),
         };
 
         // materials
@@ -55,6 +56,9 @@ export class GameScene extends Scene {
                 ambient: .4, diffusivity: .8, specularity: 0.1,
                 color: hex_color("#FFFFFF"),
                 texture: new Texture("assets/cursor.png")
+            }),
+            ammo: new Material(new defs.Phong_Shader(), {
+                ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
             }),
         };
     }
@@ -132,6 +136,9 @@ export class GameScene extends Scene {
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
 
+        if(this.user.clip <= 0) {
+            return;
+        }
         // get world space position
         let [user_x, user_z] = this.user.getPosition()
         let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state, 0);
@@ -145,7 +152,22 @@ export class GameScene extends Scene {
             velocity,
             this.map.collisionMap
         )
+
         this.map.bullet_queue.push(bullet);
+        this.user.clip--
+    }
+
+    renderAmmoIndicator(context, program_state) {
+        const bullet_spacing = 1.3;
+        const start_x = -2;
+        const start_z = 29.5;
+
+        for (let i = 0; i < this.user.clip; i++) {
+            let bullet_transform = Mat4.identity()
+                .times(Mat4.translation(start_x + i * bullet_spacing, 5, start_z)) // Position bullets in front of the camera
+                .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
+            this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
+        }
     }
 
     display(context, program_state) {
@@ -171,6 +193,7 @@ export class GameScene extends Scene {
 
         // ** Render ** display all set perspective, lights, and models in the scene
         const t = program_state.animation_time;
+        const dt = program_state.animation_delta_time / 1000;
 
         // perspective
         program_state.projection_transform = Mat4.perspective(
@@ -205,6 +228,8 @@ export class GameScene extends Scene {
         }
         this.user.updatePosition(new_x, new_z, this.direction);
         this.user.render(context, program_state);
+
+        this.renderAmmoIndicator(context, program_state);
     }
 }
 
