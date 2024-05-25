@@ -16,6 +16,7 @@ export class Bullet {
     this.velocity = initial_velocity;
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
+    this.prevCollisionBlockPosition = null;
     this.shape = new Subdivision_Sphere(4);
     this.material = new Material(new defs.Phong_Shader(), { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") });
   }
@@ -28,7 +29,8 @@ export class Bullet {
 
     // check for collision with blocks
     let collision = this.checkCollision();
-    if (collision) {
+    if (collision && (this.prevCollisionBlockPosition !== collision.block.position)) {
+      this.prevCollisionBlockPosition = collision.block.position;
       let normal = collision.normal;
       let dotProduct = this.velocity.dot(normal);
       this.velocity = this.velocity.minus(normal.times(2 * dotProduct));
