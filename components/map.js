@@ -167,6 +167,7 @@ class Map {
     }
 
     render(context, program_state) {
+        const dt = program_state.animation_delta_time / 1000;
         // draw background
         let background_transform = Mat4.identity().times(Mat4.translation(16, -1, 15))
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
@@ -190,13 +191,15 @@ class Map {
         }
 
         // draw bullets
-        if (this.bullet_queue.length > 0) {
-            for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
-                let result = this.bullet_queue[i].render(context, program_state);
-                if (!result) {
-                    delete this.bullet_queue[i]; // cleanup bullet
-                    this.bullet_queue.splice(i, 1);
-                }
+        for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
+            const bullet = this.bullet_queue[i];
+            const stillExists = bullet.updateAndCheckExistence(dt);
+
+            bullet.renderBullet(context, program_state);
+            bullet.renderSmoke(context, program_state);
+
+            if (!stillExists) {
+                this.bullet_queue.splice(i, 1); // Remove the bullet from the array
             }
         }
 

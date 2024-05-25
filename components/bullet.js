@@ -14,10 +14,11 @@ const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
-const BULLET_SPEED = 0.3;
+const BULLET_SPEED = 4.5;
+const BULLET_REMOVAL_DELAY = 2000;
 
 const PARTICLE_SPAWN_RATE = 0.001;
-const PARTICLE_LIFETIME = 0.7;
+const PARTICLE_LIFETIME = 0.95;
 const PARTICLE_INITIAL_SCALE = 0.2;
 const PARTICLE_MAX_SCALE = .5;
 const PARTICLE_INITIAL_OPACITY = 0.3; // 0.4
@@ -37,6 +38,8 @@ export class Bullet {
       sphere: new Subdivision_Sphere(3),
     };
 
+    this.timeSinceStoppedRendering = 0;
+    this.shouldRenderBullet = true;
     // smoke
     this.particles = [];
     this.particleSpawnRate = PARTICLE_SPAWN_RATE;
@@ -58,13 +61,17 @@ export class Bullet {
   }
 
   update(dt) {
-    this.position = this.position.plus(this.velocity.times(dt));
-    this.timeSinceLastSpawn += dt;
+    if (this.shouldRenderBullet) {
+      this.position = this.position.plus(this.velocity.times(dt));
+      this.timeSinceLastSpawn += dt;
 
-    // Spawn new particles
-    if (this.timeSinceLastSpawn > this.particleSpawnRate) {
-      this.spawnParticle();
-      this.timeSinceLastSpawn = 0;
+      // Spawn new particles
+      if (this.timeSinceLastSpawn > this.particleSpawnRate) {
+        this.spawnParticle();
+        this.timeSinceLastSpawn = 0;
+      }
+    } else {
+      this.timeSinceStoppedRendering += dt;
     }
 
     // Update particles
@@ -74,9 +81,6 @@ export class Bullet {
         this.particles.splice(i, 1);
       }
     }
-
-    // Check for collisions
-    // (Implement collision detection and handling)
   }
 
   spawnParticle() {
@@ -99,14 +103,15 @@ export class Bullet {
     this.particles.push(particle);
   }
 
+  updateAndCheckExistence(dt) {
+    this.update(dt);
+    return this.timeSinceStoppedRendering < BULLET_REMOVAL_DELAY;
+  }
   // returns true if bullet was successfully rendered
   // returns false if bullet was not rendered and should be deleted from animation queue
-  render(context, program_state) {
+  renderBullet(context, program_state) {
+    if (!this.shouldRenderBullet) return;
     const dt = program_state.animation_delta_time / 1000;
-    this.update(dt);
-    
-    // update position
-    this.position = this.position.plus(this.velocity);
 
     // check for collision with blocks
     let collision = this.checkCollision();
@@ -128,16 +133,20 @@ export class Bullet {
       this.position[0] > MAX_MAP_DISTANCE ||
       this.position[2] < -MAX_MAP_DISTANCE ||
       this.position[2] > MAX_MAP_DISTANCE) {
-      return false;
+      this.shouldRenderBullet = false;
     } else if (this.numCollisions > MAX_BULLET_COLLISIONS) {
-      return false;
+      this.shouldRenderBullet = false;
     }
 
     // draw bullet
-    let model_transform = Mat4.translation(this.position[0], 0, this.position[2])
-      .times(Mat4.scale(BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE));
-    this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+    if (this.shouldRenderBullet) {
+      let model_transform = Mat4.translation(this.position[0], this.position[1], this.position[2])
+          .times(Mat4.scale(BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE));
+      this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+    }
+  }
 
+  renderSmoke(context,program_state) {
     // draw smoke
     for (const particle of this.particles) {
       const particle_transform = Mat4.translation(particle.position[0], particle.position[1], particle.position[2])
@@ -145,9 +154,7 @@ export class Bullet {
       const particleMaterial = this.materials.smoke.override({ color: color(0.4, 0.4, 0.4, particle.opacity) });
       this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
     }
-    return true;
   }
-
   checkCollision() {
     let position = this.position.to3();
     const candidate_blocks = [];
