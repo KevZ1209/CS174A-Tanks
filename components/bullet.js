@@ -3,11 +3,12 @@ import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
 const { vec3, hex_color, Mat4, Material } = tiny;
 
 const BULLET_SCALE = 0.5;
-const BULLET_WIDTH = 0.2;
-const BULLET_HEIGHT = 0.2;
-const BULLET_DEPTH = 0.2;
+const BULLET_WIDTH = 0.3;
+const BULLET_HEIGHT = 0.3;
+const BULLET_DEPTH = 0.3;
 const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
+const INVINCIBILITY_FRAMES = 0;
 
 export class Bullet {
   constructor(initial_position, angle, initial_velocity, collisionMap) {
@@ -16,6 +17,7 @@ export class Bullet {
     this.velocity = initial_velocity;
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
+    this.invinciblity = 0;
     this.shape = new Subdivision_Sphere(4);
     this.material = new Material(new defs.Phong_Shader(), { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") });
   }
@@ -28,12 +30,19 @@ export class Bullet {
 
     // check for collision with blocks
     let collision = this.checkCollision();
+    // if it collides
     if (collision) {
-      let normal = collision.normal;
-      let dotProduct = this.velocity.dot(normal);
-      this.velocity = this.velocity.minus(normal.times(2 * dotProduct));
-      this.numCollisions += 1;
+      if (this.invinciblity <= 0) {
+        this.invinciblity = INVINCIBILITY_FRAMES;
+        let normal = collision.normal;
+        let dotProduct = this.velocity.dot(normal);
+        this.velocity = this.velocity.minus(normal.times(2 * dotProduct));
+        this.numCollisions += 1;
+      }
     }
+
+    // decrease invincibility frame
+    this.invinciblity = this.invinciblity > 0 ? this.invinciblity - 1 : 0;
 
     // return false if out of bounds or numCollisions > 2
     if (this.position[0] < -MAX_MAP_DISTANCE ||
@@ -54,6 +63,8 @@ export class Bullet {
 
   checkCollision() {
     let position = this.position.to3();
+    const candidate_blocks = [];
+
     for (let elem of this.collisionMap) {
       const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
       const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
@@ -73,9 +84,36 @@ export class Bullet {
         } else {
           normal[2] = Math.sign(position[2] - elem.position[2]);
         }
-        return { block: elem, normal: normal };
+        candidate_blocks.push({ block: elem, normal: normal });
       }
     }
-    return null; // No collision
+    if (candidate_blocks.length === 0) {
+      return null; // No collision
+    }
+    else {
+      function calc_distance(x1, z1, x2, z2) {
+        return Math.sqrt((Math.pow(x1-x2,2))+(Math.pow(z1-z2,2)));
+      }
+
+      let min_distance = 1000;
+      let min_index = 0;
+      let bullet_position = this.position.to3();
+      for (let i = 0; i < candidate_blocks.length; i++) {
+        const block_x = candidate_blocks[i].block.position[0];
+        const block_z = candidate_blocks[i].block.position[2];
+
+        const bullet_x = bullet_position[0];
+        const bullet_z = bullet_position[2];
+
+        const curr_distance = calc_distance(block_x, block_z, bullet_x, bullet_z);
+        if (curr_distance < min_distance) {
+          min_distance = curr_distance;
+          min_index = i;
+        }
+      }
+
+      return candidate_blocks[min_index];
+
+    }
   }
 }

@@ -9,7 +9,7 @@ const {
 
 const { Textured_Phong } = defs;
 
-const BULLET_SPEED = 0.5;
+const BULLET_SPEED = 0.3;
 const INITIAL_USER_X = -10;
 const INITIAL_USER_Z = -10;
 const INITIAL_USER_ANGLE = Math.PI / 2;
