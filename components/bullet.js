@@ -26,8 +26,8 @@ export class Bullet {
 
     // smoke
     this.particles = [];
-    this.particleLifetime = 1.0; // Adjust as needed
-    this.particleSpawnRate = 0.005; // Adjust as needed
+    this.particleLifetime = 1.0;
+    this.particleSpawnRate = 0.005;
     this.timeSinceLastSpawn = 0;
 
     this.materials = {
