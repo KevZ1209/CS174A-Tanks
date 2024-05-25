@@ -34,8 +34,7 @@ class Tank {
     this.angle = initial_angle
     this.map = map;
     this.type = type;
-    this.bullet_queue = []
-    this.bomb = new Bomb(this.map);
+    this.bombActive = false;
 
     this.material = new Material(new defs.Phong_Shader(),
       { ambient: .4, diffusivity: .6, color: type.color }
@@ -47,20 +46,6 @@ class Tank {
     let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
       .times(Mat4.rotation(this.angle, 0, 1, 0));
     this.shape.draw(context, program_state, model_transform, this.material);
-
-    // bullets
-    if (this.bullet_queue.length > 0) {
-      for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
-        let result = this.bullet_queue[i].render(context, program_state);
-        if (!result) {
-          delete this.bullet_queue[i]; // cleanup bullet
-          this.bullet_queue.splice(i, 1);
-        }
-      }
-    }
-
-    // bomb
-    this.bomb.render(context, program_state);
   }
 
   updatePosition(new_x, new_z, direction = null) {
@@ -109,12 +94,12 @@ class Tank {
     return false; // No collision
   }
 
-  addToBulletQueue(bullet) {
-    this.bullet_queue.push(bullet);
-  }
-
   placeBomb() {
-    this.bomb.placeBomb(this.x, this.z);
+    if (!this.bombActive) {
+      this.bombActive = true;
+      let bomb = new Bomb(this.map, this.x, this.z, this);
+      this.map.bomb_queue.push(bomb);
+    }
   }
 
   getPosition() {

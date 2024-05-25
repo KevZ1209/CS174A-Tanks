@@ -145,7 +145,7 @@ export class GameScene extends Scene {
             velocity,
             this.map.collisionMap
         )
-        this.user.addToBulletQueue(bullet);
+        this.map.bullet_queue.push(bullet);
     }
 
     display(context, program_state) {

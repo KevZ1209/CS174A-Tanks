@@ -32,6 +32,8 @@ class Map {
         this.userPosition = Mat4.identity();
         this.user = null;
         this.level = 0;
+        this.bullet_queue = [];
+        this.bomb_queue = [];
 
         this.shapes = {
             block: new Cube(),
@@ -157,12 +159,6 @@ class Map {
             }
             model_transform = Mat4.translation(0, 0, BLOCK_SIZE * i); // next row
         }
-
-        // set collision maps
-        // this.user.updateCollisionMap(this.collisionMap);
-        // for (let enemy of this.enemies) {
-        //     enemy.updateCollisionMap(this.collisionMap);
-        // }
     }
 
     getRandomBlockMaterial() {
@@ -192,10 +188,28 @@ class Map {
         for (let enemy of this.enemies) {
             enemy.render(context, program_state);
         }
-    }
 
-    updateCollisionMap(collisionMap) {
-        this.collisionMap = collisionMap;
+        // draw bullets
+        if (this.bullet_queue.length > 0) {
+            for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
+                let result = this.bullet_queue[i].render(context, program_state);
+                if (!result) {
+                    delete this.bullet_queue[i]; // cleanup bullet
+                    this.bullet_queue.splice(i, 1);
+                }
+            }
+        }
+
+        // draw bombs
+        if (this.bomb_queue.length > 0) {
+            for (let i = this.bomb_queue.length - 1; i >= 0; i--) {
+                let result = this.bomb_queue[i].render(context, program_state);
+                if (!result) {
+                    delete this.bomb_queue[i]; // cleanup bomb
+                    this.bomb_queue.splice(i, 1);
+                }
+            }
+        }
     }
 }
 

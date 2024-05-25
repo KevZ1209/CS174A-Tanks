@@ -17,14 +17,13 @@ const EXPLOSION_ROTATION_RATE = Math.PI / EXPLOSION_LIFETIME;
 const MAX_EXPLOSION_SCALE = 4;
 
 export class Bomb {
-  constructor(map) {
-    this.x = -10;
-    this.z = -10;
-    this.lifetime = BOMB_LIFETIME;
-    this.age = 0;
-    this.active = false;
+  constructor(map, x, z, owner) {
+    this.x = x;
+    this.z = z;
     this.map = map
-
+    this.owner = owner;
+    this.age = 0;
+    this.active = true;
     this.exploding = false;
     this.explosionAge = 0;
     this.explosionAngle = 0;
@@ -48,7 +47,7 @@ export class Bomb {
 
     // render active bomb
     if (this.active) {
-      if (this.age >= this.lifetime) {
+      if (this.age >= BOMB_LIFETIME) {
         // explode bomb
         this.triggerExplosion()
       } else {
@@ -75,32 +74,20 @@ export class Bomb {
         let explosion_material = this.materials.explosion;
         this.shape.draw(context, program_state, explosion_transform, explosion_material);
       } else {
-        this.exploding = false;
-        this.explosionAge = 0;
-        this.explosionAngle = 0;
-        this.explosionScale = MAX_EXPLOSION_SCALE;
+        return false;
       }
     }
+    return true;
   }
 
   triggerExplosion() {
-    console.log("BOOM!!!!");
     this.active = false;
     this.exploding = true;
+    this.owner.bombActive = false;
 
     // remove blocks within radius
     let newCollisionMap = this.getNewCollisionMap();
-    this.map.updateCollisionMap(newCollisionMap);
-  }
-
-  placeBomb(x, z) {
-    if (!this.active) {
-      this.x = x;
-      this.z = z;
-      this.age = 0;
-      this.active = true;
-      this.exploding = false;
-    }
+    this.map.collisionMap = newCollisionMap;
   }
 
   // returns new collision map without exploded blocks
