@@ -13,6 +13,8 @@ const BULLET_DEPTH = 0.3;
 const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
+const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
+const BULLET_SPEED = 0.3;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.7;
@@ -23,10 +25,10 @@ const PARTICLE_MAX_OPACITY = 0.4; // 0.46
 const PARTICLE_OFFSET = 0.3;
 
 export class Bullet {
-  constructor(initial_position, angle, initial_velocity, collisionMap) {
-    this.position = initial_position;
+  constructor(x, z, angle, collisionMap) {
+    this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.angle = angle;
-    this.velocity = initial_velocity;
+    this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
     this.invinciblity = 0;
@@ -108,7 +110,6 @@ export class Bullet {
 
     // check for collision with blocks
     let collision = this.checkCollision();
-    // if it collides
     if (collision) {
       if (this.invinciblity <= 0) {
         this.invinciblity = INVINCIBILITY_FRAMES;
