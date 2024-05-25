@@ -135,24 +135,26 @@ export class GameScene extends Scene {
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
 
-        if(this.user.clip <= 0) {
-            return;
+        if (!this.user.dead) {
+            if (this.user.clip <= 0) {
+                return;
+            }
+
+            // get world space position
+            let [user_x, user_z] = this.user.getPosition()
+            let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state, 0);
+            let angle = Math.atan2(pos_world_ground[0] - user_x, pos_world_ground[2] - user_z)
+
+            // add bullet to animation queue
+            let bullet = new Bullet(
+                user_x,
+                user_z,
+                angle,
+                this.map.collisionMap
+            )
+            this.map.bullet_queue.push(bullet);
+            this.user.clip--
         }
-        // get world space position
-        let [user_x, user_z] = this.user.getPosition()
-        let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state, 0);
-        let angle = Math.atan2(pos_world_ground[0] - user_x, pos_world_ground[2] - user_z)
-
-        // add bullet to animation queue
-        let bullet = new Bullet(
-            user_x,
-            user_z,
-            angle,
-            this.map.collisionMap
-        )
-
-        this.map.bullet_queue.push(bullet);
-        this.user.clip--
     }
 
     renderAmmoIndicator(context, program_state) {
@@ -211,22 +213,23 @@ export class GameScene extends Scene {
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
         // user tank
-        let [new_x, new_z] = this.user.getPosition();
-        if (this.direction.up) {
-            new_z -= 0.2;
+        if (!this.user.dead) {
+            let [new_x, new_z] = this.user.getPosition();
+            if (this.direction.up) {
+                new_z -= 0.2;
+            }
+            if (this.direction.down) {
+                new_z += 0.2;
+            }
+            if (this.direction.right) {
+                new_x += 0.2;
+            }
+            if (this.direction.left) {
+                new_x -= 0.2;
+            }
+            this.user.updatePosition(new_x, new_z, this.direction);
         }
-        if (this.direction.down) {
-            new_z += 0.2;
-        }
-        if (this.direction.right) {
-            new_x += 0.2;
-        }
-        if (this.direction.left) {
-            new_x -= 0.2;
-        }
-        this.user.updatePosition(new_x, new_z, this.direction);
         this.user.render(context, program_state);
-
         this.renderAmmoIndicator(context, program_state);
     }
 }

@@ -2,7 +2,7 @@ import { defs, tiny } from '../examples/common.js';
 import { Shape_From_File } from '../examples/obj-file-demo.js';
 import { Bomb } from './bomb.js';
 
-const { vec3, hex_color, Mat4, Material } = tiny;
+const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 
 const TANK_SCALE = 0.9;
 const TANK_WIDTH = 0.5;
@@ -13,19 +13,24 @@ const RELOAD_TIME = 2500;
 
 const TANK_TYPE_ENUM = {
   USER: {
-    color: hex_color("#0F65DE")
+    color: hex_color("#0F65DE"),
+    canPlaceBombs: true
   },
   ENEMY_STATIONARY: {
-    color: hex_color("#C68C2F")
+    color: hex_color("#C68C2F"),
+    canPlaceBombs: false
   },
   ENEMY_MOVING: {
-    color: hex_color("#7A705F")
+    color: hex_color("#7A705F"),
+    canPlaceBombs: false
   },
   ENEMY_MOVING_BOMB: {
-    color: hex_color("#DDC436")
+    color: hex_color("#DDC436"),
+    canPlaceBombs: true
   },
   ENEMY_MOVING_FAST_SHOOTING: {
-    color: hex_color("#3F7F6F")
+    color: hex_color("#3F7F6F"),
+    canPlaceBombs: false
   }
 };
 
@@ -39,32 +44,55 @@ class Tank {
     this.bombActive = false;
     this.clip = MAX_CLIP_SIZE;
     this.last_reload_time = 0;
+    this.dead = false;
 
-    this.material = new Material(new defs.Phong_Shader(),
-      { ambient: .4, diffusivity: .6, color: type.color }
-    )
-    this.shape = new Shape_From_File("assets/tank.obj");
+    this.materials = {
+      tank: new Material(new defs.Phong_Shader(),
+        { ambient: .4, diffusivity: .6, color: this.type.color }),
+      user_x: new Material(new defs.Textured_Phong(), {
+        ambient: .3, diffusivity: .3, specularity: 0.0,
+        color: this.type.color,
+        texture: new Texture("assets/user_x.png")
+      }),
+      enemy_x: new Material(new defs.Textured_Phong(), {
+        ambient: .3, diffusivity: .2, specularity: 0.0,
+        color: hex_color("#ffffff"),
+        texture: new Texture("assets/enemy_x.png")
+      })
+    }
+    this.shapes = {
+      tank: new Shape_From_File("assets/tank.obj"),
+      x: new defs.Square()
+    }
   }
 
   render(context, program_state) {
-    let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
-      .times(Mat4.rotation(this.angle, 0, 1, 0));
-    this.shape.draw(context, program_state, model_transform, this.material);
+    if (!this.dead) {
+      // tank alive
+      let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
+        .times(Mat4.rotation(this.angle, 0, 1, 0));
+      this.shapes.tank.draw(context, program_state, model_transform, this.materials.tank);
 
-    const t = program_state.animation_time;
-    const dt = program_state.animation_delta_time / 1000;
+      const t = program_state.animation_time;
+      const dt = program_state.animation_delta_time / 1000;
 
-    // reload bullets
-    if(this.clip >= MAX_CLIP_SIZE) {
-      this.last_reload_time = t
-    } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
-      this.clip++;
-      this.last_reload_time = t;
+      // reload bullets
+      if (this.clip >= MAX_CLIP_SIZE) {
+        this.last_reload_time = t
+      } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
+        this.clip++;
+        this.last_reload_time = t;
+      }
+    } else {
+      // tank dead
+      let model_transform = Mat4.translation(this.x, -0.9, this.z)
+        .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+        .times(Mat4.scale(1.3, 1.3, 1.3))
+      this.shapes.x.draw(context, program_state, model_transform, this.type === TANK_TYPE_ENUM.USER ? this.materials.user_x : this.materials.enemy_x);
     }
   }
 
   updatePosition(new_x, new_z, direction = null) {
-    // update with collision detection
     if (direction) {
       // Update X position
       let potential_new_x = new_x;
@@ -81,9 +109,8 @@ class Tank {
       } else if (direction.down && !this.checkCollision(this.x, potential_new_z)) {
         this.z = potential_new_z;
       }
-
-      // update without collision detection
     } else {
+      // update without collision detection
       this.x = new_x;
       this.z = new_z;
     }
@@ -110,7 +137,7 @@ class Tank {
   }
 
   placeBomb() {
-    if (!this.bombActive) {
+    if (!this.dead && this.type.canPlaceBombs && !this.bombActive) {
       this.bombActive = true;
       let bomb = new Bomb(this.map, this.x, this.z, this);
       this.map.bomb_queue.push(bomb);

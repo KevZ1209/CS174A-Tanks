@@ -123,8 +123,7 @@ export class Bomb {
   updateTanks() {
     let position = vec3(this.x, 1, this.z);
     let tanks = [this.map.user, ...this.map.enemies];
-    console.log(tanks)
-    let newEnemies = [];
+    // let newEnemies = [];
 
     for (let tank of tanks) {
       const bombMin = position.minus(vec3(BOMB_RADIUS, BOMB_RADIUS, BOMB_RADIUS));
@@ -138,18 +137,17 @@ export class Bomb {
       const yOverlap = bombMin[1] <= tankMin[1] && bombMax[1] >= tankMax[1];
       const zOverlap = bombMin[2] <= tankMin[2] && bombMax[2] >= tankMax[2];
 
-      if (!(xOverlap && yOverlap && zOverlap)) {
-        if (tank.type !== TANK_TYPE_ENUM.USER) {
-          newEnemies.push(enemy); // no overlap, enemy survived
-        }
-      } else {
+      if ((xOverlap && yOverlap && zOverlap)) {
+        tank.dead = true;
         if (tank.type === TANK_TYPE_ENUM.USER) {
           console.log("user died :((")
           // TODO: reduce user lives, handle game loop
+        } else {
+          console.log("enemy died")
         }
       }
     }
 
-    this.map.enemies = newEnemies;
+    // this.map.enemies = newEnemies;
   }
 }
