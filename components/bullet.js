@@ -1,7 +1,8 @@
 import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
+import { Particle } from "./particle.js";
 
-const { vec3, hex_color, Mat4, Material } = tiny;
+const { vec3, hex_color, Mat4, Material, color } = tiny;
 
 const BULLET_SCALE = 0.5;
 const BULLET_WIDTH = 0.3;
@@ -19,8 +20,74 @@ export class Bullet {
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
     this.invinciblity = 0;
-    this.shape = new Subdivision_Sphere(4);
-    this.material = new Material(new defs.Phong_Shader(), { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") });
+    this.shapes = {
+      bullet: new Subdivision_Sphere(4),
+      sphere: new Subdivision_Sphere(3),
+    };
+
+    // smoke
+    this.particles = [];
+    this.particleLifetime = 1.0;
+    this.particleSpawnRate = 0.005;
+    this.timeSinceLastSpawn = 0;
+
+    this.materials = {
+      bulletMaterial: new Material(new defs.Phong_Shader(), {
+        ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+      }),
+      smoke: new Material(new defs.Phong_Shader(), {
+        ambient: .4, diffusivity: .2, color: hex_color("#d2d0d0")
+      }),
+    };
+  }
+
+  update(dt) {
+    this.position = this.position.plus(this.velocity.times(dt));
+    this.timeSinceLastSpawn += dt;
+
+    // Spawn new particles
+    if (this.timeSinceLastSpawn > this.particleSpawnRate) {
+      this.spawnParticle();
+      this.timeSinceLastSpawn = 0;
+    }
+
+    // Update particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (this.particles[i].isDead()) {
+        this.particles.splice(i, 1);
+      }
+    }
+
+    // Check for collisions
+    // (Implement collision detection and handling)
+  }
+
+  spawnParticle() {
+    const offset = 0.8; // Adjust as needed for spread
+    const particlePosition = this.position.plus(vec3(
+        (Math.random() - 0.5) * offset,
+        0,
+        (Math.random() - 0.5) * offset
+    ));
+    const particleVelocity = vec3(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05);
+
+    const minLifetime = 0.3; // Minimum lifetime of particles
+    const maxLifetime = 0.5; // Maximum lifetime of particles
+    const particleLifetime = Math.random() * (maxLifetime - minLifetime) + minLifetime;
+
+    const minScale = 0.07; // Minimum scale of particles
+    const maxScale = 0.25; // Maximum scale of particles
+    const particleScale = Math.random() * (maxScale - minScale) + minScale;
+
+    const initialOpacity = 0.7;
+
+    const minFadeRate = 0.1; // Minimum fade rate
+    const maxFadeRate = 0.5; // Maximum fade rate
+    const fadeRate = Math.random() * (minFadeRate - maxFadeRate) + maxFadeRate;
+
+    const particle = new Particle(particlePosition, particleVelocity, particleLifetime, particleScale, initialOpacity, fadeRate);
+    this.particles.push(particle);
   }
 
   // returns true if bullet was successfully rendered
@@ -58,7 +125,15 @@ export class Bullet {
     // draw bullet
     let model_transform = Mat4.translation(this.position[0], 0, this.position[2])
       .times(Mat4.scale(BULLET_SCALE, BULLET_SCALE, BULLET_SCALE));
-    this.shape.draw(context, program_state, model_transform, this.material);
+    this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+
+    // draw smoke
+    for (const particle of this.particles) {
+      const particle_transform = Mat4.translation(particle.position[0], particle.position[1], particle.position[2])
+          .times(Mat4.scale(particle.scale, particle.scale, particle.scale)); // Adjust particle size
+      const particleMaterial = this.materials.smoke.override({ color: color(0.4, 0.4, 0.4, particle.opacity) });
+      this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
+    }
     return true;
   }
 

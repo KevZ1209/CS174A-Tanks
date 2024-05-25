@@ -188,6 +188,7 @@ export class GameScene extends Scene {
 
         // ** Render ** display all set perspective, lights, and models in the scene
         const t = program_state.animation_time;
+        const dt = program_state.animation_delta_time / 1000;
 
         // perspective
         program_state.projection_transform = Mat4.perspective(
