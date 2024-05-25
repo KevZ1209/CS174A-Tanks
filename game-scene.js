@@ -24,18 +24,19 @@ export class GameScene extends Scene {
 
         this.initialized = false;
 
+        // map
+        this.map = new Map();
+        this.level = 0;
+
         // player movement
-        this.user = new Tank(INITIAL_USER_X, INITIAL_USER_Z, INITIAL_USER_ANGLE, TANK_TYPE_ENUM.USER);
+        this.user = new Tank(INITIAL_USER_X, INITIAL_USER_Z, INITIAL_USER_ANGLE, TANK_TYPE_ENUM.USER, this.map);
         this.direction = {
             up: false,
             down: false,
             right: false,
             left: false
         }
-
-        // map
-        this.map = new Map(this.user);
-        this.level = 0;
+        this.map.user = this.user;
 
         // cursor
         this.cursor_x = INITIAL_CURSOR_X;
@@ -70,6 +71,9 @@ export class GameScene extends Scene {
             "#6E6460", () => { this.direction.left = false });
         this.new_line();
         this.key_triggered_button("Move Right", ["d"], () => { this.direction.right = true },
+            "#6E6460", () => { this.direction.right = false });
+        this.new_line();
+        this.key_triggered_button("Place Bomb", ["e"], () => { this.user.placeBomb() },
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Next Level", ["l"], () => {
@@ -118,7 +122,7 @@ export class GameScene extends Scene {
         // calculate the angle between user position and mouse position and update rotation
         let [user_x, user_z] = this.user.getPosition()
         let angle = Math.atan2(pos_world_ground[0] - user_x, pos_world_ground[2] - user_z);
-        this.user.updateRotation(angle)
+        this.user.angle = angle;
 
         // update cursor position
         this.cursor_x = pos_world_cursor[0]

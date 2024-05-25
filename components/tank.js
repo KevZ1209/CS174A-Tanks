@@ -1,5 +1,6 @@
 import { defs, tiny } from '../examples/common.js';
 import { Shape_From_File } from '../examples/obj-file-demo.js';
+import { Bomb } from './bomb.js';
 
 const { vec3, hex_color, Mat4, Material } = tiny;
 
@@ -27,14 +28,14 @@ const TANK_TYPE_ENUM = {
 };
 
 class Tank {
-  constructor(initial_x, initial_z, initial_angle, type, collisionMap = []) {
+  constructor(initial_x, initial_z, initial_angle, type, map) {
     this.x = initial_x;
     this.z = initial_z;
     this.angle = initial_angle
-    this.hide = false;
-    this.collisionMap = collisionMap;
+    this.map = map;
     this.type = type;
     this.bullet_queue = []
+    this.bomb = new Bomb(this.map);
 
     this.material = new Material(new defs.Phong_Shader(),
       { ambient: .4, diffusivity: .6, color: type.color }
@@ -43,12 +44,11 @@ class Tank {
   }
 
   render(context, program_state) {
-    if (!this.hide) {
-      let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
-        .times(Mat4.rotation(this.angle, 0, 1, 0));
-      this.shape.draw(context, program_state, model_transform, this.material);
-    }
+    let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
+      .times(Mat4.rotation(this.angle, 0, 1, 0));
+    this.shape.draw(context, program_state, model_transform, this.material);
 
+    // bullets
     if (this.bullet_queue.length > 0) {
       for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
         let result = this.bullet_queue[i].render(context, program_state);
@@ -58,6 +58,9 @@ class Tank {
         }
       }
     }
+
+    // bomb
+    this.bomb.render(context, program_state);
   }
 
   updatePosition(new_x, new_z, direction = null) {
@@ -88,7 +91,7 @@ class Tank {
 
   checkCollision(potential_x, potential_z) {
     let position = vec3(potential_x, 0, potential_z);
-    for (let elem of this.collisionMap) {
+    for (let elem of this.map.collisionMap) {
       const tankMin = position.minus(vec3(TANK_WIDTH, 0, TANK_DEPTH));
       const tankMax = position.plus(vec3(TANK_WIDTH, TANK_HEIGHT, TANK_DEPTH));
 
@@ -110,24 +113,12 @@ class Tank {
     this.bullet_queue.push(bullet);
   }
 
-  updateCollisionMap(collisionMap) {
-    this.collisionMap = collisionMap;
-  }
-
-  updateRotation(angle) {
-    this.angle = angle;
+  placeBomb() {
+    this.bomb.placeBomb(this.x, this.z);
   }
 
   getPosition() {
     return [this.x, this.z];
-  }
-
-  hide() {
-    this.hide = true;
-  }
-
-  show() {
-    this.hide = false;
   }
 }
 
