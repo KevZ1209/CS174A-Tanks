@@ -14,17 +14,18 @@ const MAP_SCHEMATIC_ENUM = {
     EMPTY: '0',
     BLOCK: '1',
     CORK: '2',
+    HOLE: '3',
     USER: '*',
-    ENEMY_STATIONARY: '3',
-    ENEMY_MOVING: '4',
-    ENEMY_MOVING_BOMB: '5',
-    ENEMY_MOVING_FAST_SHOOTING: '6'
+    ENEMY_STATIONARY: 's',
+    ENEMY_MOVING: 'm',
+    ENEMY_MOVING_BOMB: 'b',
+    ENEMY_MOVING_FAST_SHOOTING: 'f'
 }
 
 const BLOCK_COLOR = hex_color("#D9AD89");
 const CORK_COLOR = hex_color("#BC8953");
 
-export class Map {
+class Map {
     constructor(user) {
         this.collisionMap = [];
         this.enemies = [];
@@ -34,7 +35,7 @@ export class Map {
 
         this.shapes = {
             block: new Cube(),
-            background: new defs.Square()
+            square: new defs.Square(),
         };
 
         this.materials = {
@@ -48,6 +49,11 @@ export class Map {
                 ambient: .4, diffusivity: .8, specularity: 0.1,
                 color: BLOCK_COLOR,
                 texture: new Texture("assets/map_background.jpg")
+            }),
+            hole: new Material(new Textured_Phong(), {
+                ambient: .4, diffusivity: .1, specularity: 0.0,
+                color: BLOCK_COLOR,
+                texture: new Texture("assets/hole.png")
             })
         }
         this.files = [
@@ -105,6 +111,18 @@ export class Map {
                         type: MAP_SCHEMATIC_ENUM.CORK,
                         material: this.materials.cork
                     });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.HOLE) {
+                    // if current character is a HOLE
+                    let hole_position = model_transform.times(vec4(0, 0, 0, 1))
+                    let hole_model_transform = model_transform.times(Mat4.translation(0, -0.9, 0))
+                        .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+                    this.collisionMap.push({
+                        position: hole_position.to3(),
+                        model_transform: hole_model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.HOLE,
+                        material: this.materials.hole
+                    });
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.USER) {
                     // if current character is an USER
                     this.userPosition = vec4(x, 0, z, 1);
@@ -156,12 +174,18 @@ export class Map {
         // draw background
         let background_transform = Mat4.identity().times(Mat4.translation(16, -1, 15))
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
-            .times(Mat4.scale(50, 30, 1))
-        this.shapes.background.draw(context, program_state, background_transform, this.materials.background)
+            .times(Mat4.scale(40, 20, 1))
+        this.shapes.square.draw(context, program_state, background_transform, this.materials.background)
 
         //  draw elements
         for (let elem of this.collisionMap) {
-            this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
+            if (elem.type === MAP_SCHEMATIC_ENUM.BLOCK) {
+                this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
+            } else if (elem.type === MAP_SCHEMATIC_ENUM.CORK) {
+                this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
+            } else if (elem.type === MAP_SCHEMATIC_ENUM.HOLE) {
+                this.shapes.square.draw(context, program_state, elem.model_transform, elem.material);
+            }
         }
 
         // draw enemies
@@ -170,3 +194,5 @@ export class Map {
         }
     }
 }
+
+export { Map, MAP_SCHEMATIC_ENUM }

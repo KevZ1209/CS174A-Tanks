@@ -28,15 +28,14 @@ const TANK_TYPE_ENUM = {
 
 class Tank {
   constructor(initial_x, initial_z, initial_angle, type, collisionMap = []) {
-    // movement controls
     this.x = initial_x;
     this.z = initial_z;
     this.angle = initial_angle
     this.hide = false;
     this.collisionMap = collisionMap;
     this.type = type;
+    this.bullet_queue = []
 
-    // material and shape
     this.material = new Material(new defs.Phong_Shader(),
       { ambient: .4, diffusivity: .6, color: type.color }
     )
@@ -49,9 +48,19 @@ class Tank {
         .times(Mat4.rotation(this.angle, 0, 1, 0));
       this.shape.draw(context, program_state, model_transform, this.material);
     }
+
+    if (this.bullet_queue.length > 0) {
+      for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
+        let result = this.bullet_queue[i].render(context, program_state);
+        if (!result) {
+          delete this.bullet_queue[i]; // cleanup bullet
+          this.bullet_queue.splice(i, 1);
+        }
+      }
+    }
   }
 
-  updatePosition(new_x, new_z, direction=null) {
+  updatePosition(new_x, new_z, direction = null) {
     // update with collision detection
     if (direction) {
       // Update X position
@@ -69,8 +78,8 @@ class Tank {
       } else if (direction.down && !this.checkCollision(this.x, potential_new_z)) {
         this.z = potential_new_z;
       }
-      
-    // update without collision detection
+
+      // update without collision detection
     } else {
       this.x = new_x;
       this.z = new_z;
@@ -95,6 +104,10 @@ class Tank {
       }
     }
     return false; // No collision
+  }
+
+  addToBulletQueue(bullet) {
+    this.bullet_queue.push(bullet);
   }
 
   updateCollisionMap(collisionMap) {
