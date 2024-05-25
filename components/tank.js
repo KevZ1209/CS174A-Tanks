@@ -7,6 +7,8 @@ const TANK_SCALE = 0.9;
 const TANK_WIDTH = 0.5;
 const TANK_HEIGHT = 1;
 const TANK_DEPTH = 0.5;
+const MAX_CLIP_SIZE = 3;
+const RELOAD_TIME = 2500;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -35,6 +37,8 @@ class Tank {
     this.collisionMap = collisionMap;
     this.type = type;
     this.bullet_queue = []
+    this.clip = MAX_CLIP_SIZE;
+    this.last_reload_time = 0;
 
     this.material = new Material(new defs.Phong_Shader(),
       { ambient: .4, diffusivity: .6, color: type.color }
@@ -49,6 +53,9 @@ class Tank {
       this.shape.draw(context, program_state, model_transform, this.material);
     }
 
+    const t = program_state.animation_time;
+    const dt = program_state.animation_delta_time / 1000;
+
     if (this.bullet_queue.length > 0) {
       for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
         let result = this.bullet_queue[i].render(context, program_state);
@@ -58,6 +65,14 @@ class Tank {
         }
       }
     }
+    //reload bullets
+    if(this.clip >= MAX_CLIP_SIZE) {
+      this.last_reload_time = t
+    } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
+      this.clip++;
+      this.last_reload_time = t;
+    }
+
   }
 
   updatePosition(new_x, new_z, direction = null) {
@@ -120,6 +135,10 @@ class Tank {
 
   getPosition() {
     return [this.x, this.z];
+  }
+
+  getClipAmount() {
+    return this.clip;
   }
 
   hide() {
