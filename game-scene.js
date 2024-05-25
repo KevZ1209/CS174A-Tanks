@@ -153,7 +153,7 @@ export class GameScene extends Scene {
     }
 
     renderAmmoIndicator(context, program_state) {
-        const bullet_spacing = 1.2;
+        const bullet_spacing = 1.3;
         const start_x = -2;
         const start_z = 29.4;
 

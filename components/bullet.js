@@ -12,6 +12,14 @@ const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 
+const PARTICLE_MIN_LIFETIME = 0.3
+const PARTICLE_MAX_LIFETIME = 0.5;
+const PARTICLE_MIN_SCALE = 0.07;
+const PARTICLE_MAX_SCALE = 0.25;
+const PARTICLE_MIN_FADE_RATE = 0.1;
+const PARTICLE_MAX_FADE_RATE = 0.5;
+const PARTICLE_INITIAL_OPACITY = 0.5;
+
 export class Bullet {
   constructor(initial_position, angle, initial_velocity, collisionMap) {
     this.position = initial_position;
@@ -70,23 +78,13 @@ export class Bullet {
         0,
         (Math.random() - 0.5) * offset
     ));
+
     const particleVelocity = vec3(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05);
+    const particleLifetime = Math.random() * (PARTICLE_MAX_LIFETIME - PARTICLE_MIN_LIFETIME) + PARTICLE_MIN_LIFETIME;
+    const particleScale = Math.random() * (PARTICLE_MAX_SCALE - PARTICLE_MIN_SCALE) + PARTICLE_MIN_SCALE;
+    const fadeRate = Math.random() * (PARTICLE_MIN_FADE_RATE - PARTICLE_MAX_FADE_RATE) + PARTICLE_MAX_FADE_RATE;
 
-    const minLifetime = 0.3; // Minimum lifetime of particles
-    const maxLifetime = 0.5; // Maximum lifetime of particles
-    const particleLifetime = Math.random() * (maxLifetime - minLifetime) + minLifetime;
-
-    const minScale = 0.07; // Minimum scale of particles
-    const maxScale = 0.25; // Maximum scale of particles
-    const particleScale = Math.random() * (maxScale - minScale) + minScale;
-
-    const initialOpacity = 0.7;
-
-    const minFadeRate = 0.1; // Minimum fade rate
-    const maxFadeRate = 0.5; // Maximum fade rate
-    const fadeRate = Math.random() * (minFadeRate - maxFadeRate) + maxFadeRate;
-
-    const particle = new Particle(particlePosition, particleVelocity, particleLifetime, particleScale, initialOpacity, fadeRate);
+    const particle = new Particle(particlePosition, particleVelocity, particleLifetime, particleScale, PARTICLE_INITIAL_OPACITY, fadeRate);
     this.particles.push(particle);
   }
 
