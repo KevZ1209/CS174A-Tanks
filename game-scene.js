@@ -37,11 +37,9 @@ export class GameScene extends Scene {
         this.map = new Map(this.user);
         this.level = 0;
 
+        // cursor
         this.cursor_x = INITIAL_CURSOR_X;
         this.cursor_z = INITIAL_CURSOR_Z;
-
-        // bullets
-        this.bullet_queue = [];
 
         // shapes
         this.shapes = {
@@ -143,7 +141,7 @@ export class GameScene extends Scene {
             velocity,
             this.map.collisionMap
         )
-        this.bullet_queue.push(bullet);
+        this.user.addToBulletQueue(bullet);
     }
 
     display(context, program_state) {
@@ -203,17 +201,6 @@ export class GameScene extends Scene {
         }
         this.user.updatePosition(new_x, new_z, this.direction);
         this.user.render(context, program_state);
-
-        // bullets
-        if (this.bullet_queue.length > 0) {
-            for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
-                let result = this.bullet_queue[i].render(context, program_state);
-                if (!result) {
-                    delete this.bullet_queue[i]; // cleanup bullet
-                    this.bullet_queue.splice(i, 1);
-                }
-            }
-        }
     }
 }
 
