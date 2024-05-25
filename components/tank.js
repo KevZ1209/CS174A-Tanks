@@ -122,4 +122,4 @@ class Tank {
   }
 }
 
-export { Tank, TANK_TYPE_ENUM }
+export { Tank, TANK_TYPE_ENUM, TANK_HEIGHT, TANK_WIDTH, TANK_DEPTH }

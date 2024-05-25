@@ -1,5 +1,6 @@
 import { Subdivision_Sphere, defs, tiny } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
+import { TANK_HEIGHT, TANK_WIDTH, TANK_DEPTH, TANK_TYPE_ENUM } from './tank.js';
 
 const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 
@@ -86,12 +87,12 @@ export class Bomb {
     this.owner.bombActive = false;
 
     // remove blocks within radius
-    let newCollisionMap = this.getNewCollisionMap();
-    this.map.collisionMap = newCollisionMap;
+    this.updateCollisionMap();
+    this.updateTanks();
   }
 
   // returns new collision map without exploded blocks
-  getNewCollisionMap() {
+  updateCollisionMap() {
     let position = vec3(this.x, 1, this.z);
     let newCollisionMap = [];
 
@@ -116,6 +117,39 @@ export class Bomb {
       }
     }
 
-    return newCollisionMap;
+    this.map.collisionMap = newCollisionMap;
+  }
+
+  updateTanks() {
+    let position = vec3(this.x, 1, this.z);
+    let tanks = [this.map.user, ...this.map.enemies];
+    console.log(tanks)
+    let newEnemies = [];
+
+    for (let tank of tanks) {
+      const bombMin = position.minus(vec3(BOMB_RADIUS, BOMB_RADIUS, BOMB_RADIUS));
+      const bombMax = position.plus(vec3(BOMB_RADIUS, BOMB_RADIUS, BOMB_RADIUS));
+
+      let tankPosition = vec3(tank.x, 0, tank.z);
+      const tankMin = tankPosition.minus(vec3(TANK_WIDTH / 2, TANK_HEIGHT / 2, TANK_DEPTH / 2));
+      const tankMax = tankPosition.plus(vec3(TANK_WIDTH / 2, TANK_HEIGHT / 2, TANK_DEPTH / 2));
+
+      const xOverlap = bombMin[0] <= tankMin[0] && bombMax[0] >= tankMax[0];
+      const yOverlap = bombMin[1] <= tankMin[1] && bombMax[1] >= tankMax[1];
+      const zOverlap = bombMin[2] <= tankMin[2] && bombMax[2] >= tankMax[2];
+
+      if (!(xOverlap && yOverlap && zOverlap)) {
+        if (tank.type !== TANK_TYPE_ENUM.USER) {
+          newEnemies.push(enemy); // no overlap, enemy survived
+        }
+      } else {
+        if (tank.type === TANK_TYPE_ENUM.USER) {
+          console.log("user died :((")
+          // TODO: reduce user lives, handle game loop
+        }
+      }
+    }
+
+    this.map.enemies = newEnemies;
   }
 }
