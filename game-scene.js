@@ -15,6 +15,7 @@ const INITIAL_USER_Z = -10;
 const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
+const MAX_LEVELS = 3;
 
 export class GameScene extends Scene {
     constructor() {
@@ -74,7 +75,7 @@ export class GameScene extends Scene {
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Next Level", ["l"], () => {
-            if (this.level < 2) {
+            if (this.level < MAX_LEVELS) {
                 this.level += 1;
                 this.map.initializeLevel(this.level);
             }
