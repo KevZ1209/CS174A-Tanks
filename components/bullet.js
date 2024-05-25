@@ -1,4 +1,5 @@
 import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
+import { MAP_SCHEMATIC_ENUM } from './map.js';
 
 const { vec3, hex_color, Mat4, Material } = tiny;
 
@@ -55,26 +56,29 @@ export class Bullet {
   checkCollision() {
     let position = this.position.to3();
     for (let elem of this.collisionMap) {
-      const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
-      const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+      if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
+        const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
 
-      const elemMin = elem.position.minus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
-      const elemMax = elem.position.plus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+        const elemMin = elem.position.minus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+        const elemMax = elem.position.plus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
 
-      const xOverlap = bulletMin[0] <= elemMax[0] && bulletMax[0] >= elemMin[0];
-      const yOverlap = bulletMin[1] <= elemMax[1] && bulletMax[1] >= elemMin[1];
-      const zOverlap = bulletMin[2] <= elemMax[2] && bulletMax[2] >= elemMin[2];
+        const xOverlap = bulletMin[0] <= elemMax[0] && bulletMax[0] >= elemMin[0];
+        const yOverlap = bulletMin[1] <= elemMax[1] && bulletMax[1] >= elemMin[1];
+        const zOverlap = bulletMin[2] <= elemMax[2] && bulletMax[2] >= elemMin[2];
 
-      if (xOverlap && yOverlap && zOverlap) {
-        // Determine the normal vector of the collision
-        let normal = vec3(0, 0, 0);
-        if (Math.abs(position[0] - elem.position[0]) > Math.abs(position[2] - elem.position[2])) {
-          normal[0] = Math.sign(position[0] - elem.position[0]);
-        } else {
-          normal[2] = Math.sign(position[2] - elem.position[2]);
+        if (xOverlap && yOverlap && zOverlap) {
+          // Determine the normal vector of the collision
+          let normal = vec3(0, 0, 0);
+          if (Math.abs(position[0] - elem.position[0]) > Math.abs(position[2] - elem.position[2])) {
+            normal[0] = Math.sign(position[0] - elem.position[0]);
+          } else {
+            normal[2] = Math.sign(position[2] - elem.position[2]);
+          }
+          return { block: elem, normal: normal };
         }
-        return { block: elem, normal: normal };
       }
+
     }
     return null; // No collision
   }
