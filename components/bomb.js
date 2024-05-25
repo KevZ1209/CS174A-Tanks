@@ -1,14 +1,20 @@
 import { Subdivision_Sphere, defs, tiny } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
 
-const { vec3, hex_color, Mat4, Material } = tiny;
+const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 
-const BOMB_COLOR = hex_color("#DBC63A");
-const BOMB_LIFETIME = 5; // 5 seconds
+const BOMB_COLOR_YELLOW = hex_color("#DBC63A");
+const BOMB_COLOR_RED = hex_color("#E46969");
+const BOMB_LIFETIME = 7; // seconds
 const BOMB_RADIUS = 4;
 const BOMB_WIDTH = 1;
 const BOMB_HEIGHT = 1;
 const BOMB_DEPTH = 1;
+
+const EXPLOSION_COLOR = hex_color("#B64D1B");
+const EXPLOSION_LIFETIME = 0.5; // seconds
+const EXPLOSION_ROTATION_RATE = Math.PI / EXPLOSION_LIFETIME;
+const MAX_EXPLOSION_SCALE = 4;
 
 export class Bomb {
   constructor(map) {
@@ -19,29 +25,72 @@ export class Bomb {
     this.active = false;
     this.map = map
 
-    this.material = new Material(new defs.Phong_Shader(),
-      { ambient: .5, diffusivity: .6, specularity: 1, color: BOMB_COLOR });
+    this.exploding = false;
+    this.explosionAge = 0;
+    this.explosionAngle = 0;
+    this.explosionScale = MAX_EXPLOSION_SCALE;
+
+    this.materials = {
+      bomb: new Material(new defs.Phong_Shader(),
+        { ambient: .5, diffusivity: .6, specularity: 1, color: BOMB_COLOR_YELLOW }),
+      explosion: new Material(new defs.Textured_Phong(), {
+        ambient: .7, diffusivity: .9, specularity: 0.1,
+        color: EXPLOSION_COLOR,
+        texture: new Texture("assets/explosion.jpg")
+      })
+    }
     this.shape = new Subdivision_Sphere(4);
   }
 
   render(context, program_state) {
+    const dt = program_state.animation_delta_time / 1000;
+    this.age += dt;
+
+    // render active bomb
     if (this.active) {
-      const dt = program_state.animation_delta_time / 1000;
-      this.age += dt;
-
       if (this.age >= this.lifetime) {
-        // bomb exploded
-        console.log("BOOM!!!!");
-        this.active = false;
-
-        // remove blocks within radius
-        let newCollisionMap = this.explode();
-        this.map.updateCollisionMap(newCollisionMap);
+        // explode bomb
+        this.triggerExplosion()
       } else {
         // bomb timer running
-        this.shape.draw(context, program_state, Mat4.translation(this.x, -1, this.z), this.material);
+        let bombColor;
+        if (this.age > BOMB_LIFETIME - 2) {
+          bombColor = this.age % 0.14 < 0.07 ? BOMB_COLOR_YELLOW : BOMB_COLOR_RED;
+        } else {
+          bombColor = BOMB_COLOR_YELLOW;
+        }
+        this.shape.draw(context, program_state, Mat4.translation(this.x, -1, this.z), this.materials.bomb.override({ color: bombColor }));
       }
     }
+
+    // render explosion
+    if (this.exploding) {
+      if (this.explosionAge < EXPLOSION_LIFETIME) {
+        this.explosionAge += dt;
+        this.explosionAngle += EXPLOSION_ROTATION_RATE * dt;
+        this.explosionScale -= dt;
+        let explosion_transform = Mat4.translation(this.x, -1, this.z)
+          .times(Mat4.rotation(this.explosionAngle, 0, 1, 0))
+          .times(Mat4.scale(this.explosionScale, this.explosionScale, this.explosionScale));
+        let explosion_material = this.materials.explosion;
+        this.shape.draw(context, program_state, explosion_transform, explosion_material);
+      } else {
+        this.exploding = false;
+        this.explosionAge = 0;
+        this.explosionAngle = 0;
+        this.explosionScale = MAX_EXPLOSION_SCALE;
+      }
+    }
+  }
+
+  triggerExplosion() {
+    console.log("BOOM!!!!");
+    this.active = false;
+    this.exploding = true;
+
+    // remove blocks within radius
+    let newCollisionMap = this.getNewCollisionMap();
+    this.map.updateCollisionMap(newCollisionMap);
   }
 
   placeBomb(x, z) {
@@ -50,11 +99,12 @@ export class Bomb {
       this.z = z;
       this.age = 0;
       this.active = true;
+      this.exploding = false;
     }
   }
 
   // returns new collision map without exploded blocks
-  explode() {
+  getNewCollisionMap() {
     let position = vec3(this.x, 1, this.z);
     let newCollisionMap = [];
 
