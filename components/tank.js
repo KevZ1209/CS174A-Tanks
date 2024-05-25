@@ -58,6 +58,8 @@ class Tank {
 
     if (this.bullet_queue.length > 0) {
       for (let i = this.bullet_queue.length - 1; i >= 0; i--) {
+        let bullet = this.bullet_queue[i];
+        bullet.update(dt);
         let result = this.bullet_queue[i].render(context, program_state);
         if (!result) {
           delete this.bullet_queue[i]; // cleanup bullet
