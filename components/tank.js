@@ -7,7 +7,7 @@ const TANK_SCALE = 0.9;
 const TANK_WIDTH = 0.5;
 const TANK_HEIGHT = 1;
 const TANK_DEPTH = 0.5;
-const MAX_CLIP_SIZE = 3;
+const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 2500;
 
 const TANK_TYPE_ENUM = {

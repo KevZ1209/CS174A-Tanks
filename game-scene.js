@@ -155,12 +155,12 @@ export class GameScene extends Scene {
     renderAmmoIndicator(context, program_state) {
         const bullet_spacing = 1.3;
         const start_x = -2;
-        const start_z = 29.4;
+        const start_z = 29.5;
 
         for (let i = 0; i < this.user.clip; i++) {
             let bullet_transform = Mat4.identity()
                 .times(Mat4.translation(start_x + i * bullet_spacing, 5, start_z)) // Position bullets in front of the camera
-                .times(Mat4.scale(0.5, 0.5, 0.5)); // Adjust bullet size
+                .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
             this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
         }
     }
