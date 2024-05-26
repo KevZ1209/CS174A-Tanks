@@ -17,7 +17,7 @@ const EXPLOSION_LIFETIME = 0.5; // seconds
 const EXPLOSION_ROTATION_RATE = Math.PI / EXPLOSION_LIFETIME;
 const MAX_EXPLOSION_SCALE = 4;
 
-export class Bomb {
+class Bomb {
   constructor(map, x, z, owner) {
     this.x = x;
     this.z = z;
@@ -151,3 +151,5 @@ export class Bomb {
     // this.map.enemies = newEnemies;
   }
 }
+
+export { Bomb, BOMB_WIDTH, BOMB_HEIGHT, BOMB_DEPTH };

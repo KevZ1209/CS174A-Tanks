@@ -2,6 +2,7 @@ import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
 import { Particle } from "./particle.js";
 import { TANK_HEIGHT, TANK_WIDTH, TANK_DEPTH, TANK_TYPE_ENUM } from './tank.js';
+import { Bomb, BOMB_WIDTH, BOMB_HEIGHT, BOMB_DEPTH } from './bomb.js';
 
 const { vec3, vec4, hex_color, Mat4, Material, color, Texture } = tiny;
 const { Textured_Phong } = defs;
@@ -14,17 +15,18 @@ const BULLET_DEPTH = 0.3;
 const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
-const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
+const BULLET_OFFSET = 1;
 const BULLET_SPEED = 7;
 const BULLET_REMOVAL_DELAY = 650;
-const BULLET_COLLISION_DELAY = 0.2;
+// Delay before bullet can hit a tank
+const BULLET_COLLISION_DELAY = 0.175;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
 const PARTICLE_INITIAL_SCALE = 0.2;
 const PARTICLE_MAX_SCALE = .7;
-const PARTICLE_INITIAL_OPACITY = 0.37; // 0.4
-const PARTICLE_MAX_OPACITY = 0.6; // 0.46
+const PARTICLE_INITIAL_OPACITY = 0.37;
+const PARTICLE_MAX_OPACITY = 0.6;
 const PARTICLE_FADE_RATE = 0.2;
 
 const SMOKE_BURST_PARTICLE_COUNT = 50;
@@ -134,6 +136,7 @@ export class Bullet {
 
     if (this.timeSinceFired >= BULLET_COLLISION_DELAY) {
       this.checkTankCollision();
+      this.checkBombCollision();
     }
     // decrease invincibility frame
     this.invinciblity = this.invinciblity > 0 ? this.invinciblity - 1 : 0;
@@ -182,7 +185,7 @@ export class Bullet {
       const yOverlap = bulletMin[1] <= tankMax[1] && bulletMax[1] >= tankMin[1];
       const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
 
-      if (xOverlap && yOverlap && zOverlap) {
+      if (xOverlap && zOverlap && !tank.dead) {
         tank.dead = true;
         this.shouldRenderBullet = false;
         this.spawnSmokeBurst();
@@ -191,6 +194,28 @@ export class Bullet {
         } else {
           console.log("Enemy died");
         }
+      }
+    }
+  }
+
+  checkBombCollision() {
+    let position = this.position.to3();
+    for (let bomb of this.map.bomb_queue) {
+      let bombPosition = vec3(bomb.x, 0, bomb.z);
+      const bombMin = bombPosition.minus(vec3(BOMB_WIDTH*.75, BOMB_HEIGHT*.75, BOMB_DEPTH*.75));
+      const bombMax = bombPosition.plus(vec3(BOMB_WIDTH*.75, BOMB_HEIGHT*.75, BOMB_DEPTH*.75));
+
+      const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+      const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+      const xOverlap = bulletMin[0] <= bombMax[0] && bulletMax[0] >= bombMin[0];
+      const yOverlap = bulletMin[1] <= bombMax[1] && bulletMax[1] >= bombMin[1];
+      const zOverlap = bulletMin[2] <= bombMax[2] && bulletMax[2] >= bombMin[2];
+
+      if (xOverlap  && zOverlap) {
+        bomb.triggerExplosion();
+        this.shouldRenderBullet = false;
+        this.spawnSmokeBurst();
       }
     }
   }
