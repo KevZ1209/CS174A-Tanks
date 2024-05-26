@@ -1,6 +1,6 @@
 
 export class Particle {
-    constructor(position, velocity, lifetime, initialScale, maxScale, opacity, maxOpacity) {
+    constructor(position, velocity, lifetime, initialScale, maxScale, opacity,maxOpacity, isFading, fadeRate) {
         this.position = position;
         this.velocity = velocity;
         this.lifetime = lifetime;
@@ -8,7 +8,8 @@ export class Particle {
         this.maxScale = maxScale;
         this.opacity = opacity;
         this.maxOpacity = maxOpacity;
-        // this.fadeRate = fadeRate;
+        this.isFading = isFading;
+        this.fadeRate = fadeRate;
         this.age = 0;
     }
 
@@ -17,7 +18,12 @@ export class Particle {
         this.age += dt;
         const lifeRatio = this.age / this.lifetime;
         this.scale = this.initialScale + lifeRatio * (this.maxScale - this.initialScale);
-        this.opacity = this.opacity + lifeRatio * (this.maxOpacity - this.opacity);
+        if (this.isFading) {
+            this.opacity = this.opacity - lifeRatio * this.opacity *this.fadeRate;
+        } else {
+            this.opacity = this.opacity + lifeRatio * (this.maxOpacity - this.opacity) *this.fadeRate;
+        }
+
     }
 
     isDead() {

@@ -14,19 +14,21 @@ const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
-const BULLET_SPEED = 15;
+const BULLET_SPEED = 7;
 const BULLET_REMOVAL_DELAY = 650;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
 const PARTICLE_INITIAL_SCALE = 0.2;
 const PARTICLE_MAX_SCALE = .5;
-const PARTICLE_INITIAL_OPACITY = 0.3; // 0.4
-const PARTICLE_MAX_OPACITY = 0.4; // 0.46
-const PARTICLE_OFFSET = 0.3;
+const PARTICLE_INITIAL_OPACITY = 0.37; // 0.4
+const PARTICLE_MAX_OPACITY = 0.6; // 0.46
+const PARTICLE_FADE_RATE = 0.2;
 
 const SMOKE_BURST_PARTICLE_COUNT = 50;
 const SMOKE_BURST_SIZE = 1.4;
+const SMOKE_TRAIL_DENSITY = 0.5;
+const SMOKE_TRAIL_PARTICLE_COUNT = 3;
 
 export class Bullet {
   constructor(x, z, angle, collisionMap) {
@@ -70,7 +72,8 @@ export class Bullet {
 
       // Spawn new particles
       if (this.timeSinceLastSpawn > this.particleSpawnRate) {
-        this.spawnParticle(PARTICLE_OFFSET);
+        // this.spawnParticle(PARTICLE_OFFSET);
+        this.spawnSmokeTrail()
         this.timeSinceLastSpawn = 0;
       }
     } else {
@@ -86,7 +89,7 @@ export class Bullet {
     }
   }
 
-  spawnParticle(offset) {
+  spawnParticle(offset, isFading) {
     const particlePosition = this.position.plus(vec3(
         (Math.random() - 0.5) * offset,
         0,
@@ -102,13 +105,20 @@ export class Bullet {
         PARTICLE_MAX_SCALE,
         PARTICLE_INITIAL_OPACITY,
         PARTICLE_MAX_OPACITY,
+        isFading,
+        PARTICLE_FADE_RATE,
     );
     this.particles.push(particle);
   }
 
+  spawnSmokeTrail() {
+    for (let i = 0; i < SMOKE_TRAIL_PARTICLE_COUNT; i++ ) {
+      this.spawnParticle(SMOKE_TRAIL_DENSITY, true);
+    }
+  }
   spawnSmokeBurst() {
     for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++ ) {
-      this.spawnParticle(SMOKE_BURST_SIZE);
+      this.spawnParticle(SMOKE_BURST_SIZE, true);
     }
   }
 
