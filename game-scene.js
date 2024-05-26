@@ -161,7 +161,8 @@ export class GameScene extends Scene {
                 angle,
                 this.map.collisionMap,
                 this.shapes,
-                this.materials
+                this.materials,
+                this.map
             )
             this.map.bullet_queue.push(bullet);
             this.user.clip--

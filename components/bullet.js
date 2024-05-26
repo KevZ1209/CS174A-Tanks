@@ -1,6 +1,7 @@
 import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
 import { Particle } from "./particle.js";
+import { TANK_HEIGHT, TANK_WIDTH, TANK_DEPTH, TANK_TYPE_ENUM } from './tank.js';
 
 const { vec3, vec4, hex_color, Mat4, Material, color, Texture } = tiny;
 const { Textured_Phong } = defs;
@@ -16,6 +17,7 @@ const INVINCIBILITY_FRAMES = 0;
 const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
 const BULLET_SPEED = 7;
 const BULLET_REMOVAL_DELAY = 650;
+const BULLET_COLLISION_DELAY = 0.2;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
@@ -31,17 +33,19 @@ const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
-  constructor(x, z, angle, collisionMap, shapes, materials) {
+  constructor(x, z, angle, collisionMap, shapes, materials, map) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
-    this.angle = angle;
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
     this.invinciblity = 0;
+
     this.shapes = shapes;
+    this.map = map;
 
     this.timeSinceStoppedRendering = 0;
     this.shouldRenderBullet = true;
+    this.timeSinceFired = 0;
     // smoke
     this.particles = [];
     this.particleSpawnRate = PARTICLE_SPAWN_RATE;
@@ -51,6 +55,7 @@ export class Bullet {
   }
 
   update(dt) {
+    this.timeSinceFired += dt;
     if (this.shouldRenderBullet) {
       this.position = this.position.plus(this.velocity.times(dt));
       this.timeSinceLastSpawn += dt;
@@ -115,7 +120,6 @@ export class Bullet {
   renderBullet(context, program_state) {
     if (!this.shouldRenderBullet) return;
 
-
     // check for collision with blocks
     let collision = this.checkCollision();
     if (collision) {
@@ -128,6 +132,9 @@ export class Bullet {
       }
     }
 
+    if (this.timeSinceFired >= BULLET_COLLISION_DELAY) {
+      this.checkTankCollision();
+    }
     // decrease invincibility frame
     this.invinciblity = this.invinciblity > 0 ? this.invinciblity - 1 : 0;
 
@@ -159,6 +166,35 @@ export class Bullet {
       this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
     }
   }
+
+  checkTankCollision() {
+    let position = this.position.to3();
+    let tanks = [this.map.user, ...this.map.enemies];
+    for (let tank of tanks) {
+      let tankPosition = vec3(tank.x, 0, tank.z);
+      const tankMin = tankPosition.minus(vec3(TANK_WIDTH*1.9, TANK_HEIGHT*1.9, TANK_DEPTH*1.9 ));
+      const tankMax = tankPosition.plus(vec3(TANK_WIDTH*1.9, TANK_HEIGHT *1.9, TANK_DEPTH*1.9));
+
+      const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+      const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+      const xOverlap = bulletMin[0] <= tankMax[0] && bulletMax[0] >= tankMin[0];
+      const yOverlap = bulletMin[1] <= tankMax[1] && bulletMax[1] >= tankMin[1];
+      const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
+
+      if (xOverlap && yOverlap && zOverlap) {
+        tank.dead = true;
+        this.shouldRenderBullet = false;
+        this.spawnSmokeBurst();
+        if (tank.type === TANK_TYPE_ENUM.USER) {
+          console.log("User died :((");
+        } else {
+          console.log("Enemy died");
+        }
+      }
+    }
+  }
+
   checkCollision() {
     let position = this.position.to3();
     const candidate_blocks = [];
