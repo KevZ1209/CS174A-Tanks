@@ -25,6 +25,9 @@ const PARTICLE_INITIAL_OPACITY = 0.3; // 0.4
 const PARTICLE_MAX_OPACITY = 0.4; // 0.46
 const PARTICLE_OFFSET = 0.3;
 
+const SMOKE_BURST_PARTICLE_COUNT = 50;
+const SMOKE_BURST_SIZE = 1.4;
+
 export class Bullet {
   constructor(x, z, angle, collisionMap) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
@@ -67,7 +70,7 @@ export class Bullet {
 
       // Spawn new particles
       if (this.timeSinceLastSpawn > this.particleSpawnRate) {
-        this.spawnParticle();
+        this.spawnParticle(PARTICLE_OFFSET);
         this.timeSinceLastSpawn = 0;
       }
     } else {
@@ -83,11 +86,11 @@ export class Bullet {
     }
   }
 
-  spawnParticle() {
+  spawnParticle(offset) {
     const particlePosition = this.position.plus(vec3(
-        (Math.random() - 0.5) * PARTICLE_OFFSET,
+        (Math.random() - 0.5) * offset,
         0,
-        (Math.random() - 0.5) * PARTICLE_OFFSET
+        (Math.random() - 0.5) * offset,
     ));
 
     const particleVelocity = vec3(Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05, Math.random() * 0.1 - 0.05);
@@ -103,6 +106,12 @@ export class Bullet {
     this.particles.push(particle);
   }
 
+  spawnSmokeBurst() {
+    for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++ ) {
+      this.spawnParticle(SMOKE_BURST_SIZE);
+    }
+  }
+
   updateAndCheckExistence(dt) {
     this.update(dt);
     return this.timeSinceStoppedRendering < BULLET_REMOVAL_DELAY;
@@ -111,7 +120,7 @@ export class Bullet {
   // returns false if bullet was not rendered and should be deleted from animation queue
   renderBullet(context, program_state) {
     if (!this.shouldRenderBullet) return;
-    const dt = program_state.animation_delta_time / 1000;
+
 
     // check for collision with blocks
     let collision = this.checkCollision();
@@ -135,6 +144,7 @@ export class Bullet {
       this.position[2] > MAX_MAP_DISTANCE) {
       this.shouldRenderBullet = false;
     } else if (this.numCollisions > MAX_BULLET_COLLISIONS) {
+      this.spawnSmokeBurst();
       this.shouldRenderBullet = false;
     }
 
