@@ -306,7 +306,7 @@ export class GameScene extends Scene {
 
         // ** Game Loop **
         if (this.state === TITLE_STATE) {
-            let text_transform = Mat4.translation(13, 1.1, 16).times(this.textTransform)
+            let text_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform)
             this.shapes.text.set_string("Tanks!", context.context);
             this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
@@ -424,7 +424,9 @@ export class GameScene extends Scene {
             this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
         } else if (this.state === DEV_STATE) {
-            this.moveUser()
+            if (!this.user.dead) {
+                this.moveUser();
+            }
             this.map.render(context, program_state);
             this.user.render(context, program_state);
             this.renderAmmoIndicator(context, program_state);

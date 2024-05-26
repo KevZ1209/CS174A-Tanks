@@ -52,9 +52,8 @@ class Map {
                 color: BLOCK_COLOR,
                 texture: new Texture("assets/map_background.jpg")
             }),
-            hole: new Material(new Textured_Phong(), {
-                ambient: .4, diffusivity: .1, specularity: 0.0,
-                color: BLOCK_COLOR,
+            hole: new Material(new Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/hole.png")
             })
         }
