@@ -14,8 +14,8 @@ const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 const BULLET_OFFSET = 1; // how far the bullet should be initialized in front of tank
-const BULLET_SPEED = 4.5;
-const BULLET_REMOVAL_DELAY = 2000;
+const BULLET_SPEED = 15;
+const BULLET_REMOVAL_DELAY = 650;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
