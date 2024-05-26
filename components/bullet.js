@@ -53,6 +53,8 @@ export class Bullet {
     this.particleSpawnRate = PARTICLE_SPAWN_RATE;
     this.timeSinceLastSpawn = 0;
 
+    this.burstStarted = false;
+
     this.materials = materials;
   }
 
@@ -78,6 +80,7 @@ export class Bullet {
         this.particles.splice(i, 1);
       }
     }
+    this.checkBulletCollision();
   }
 
   spawnParticle(offset, isFading) {
@@ -108,14 +111,17 @@ export class Bullet {
     }
   }
   spawnSmokeBurst() {
-    for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++ ) {
-      this.spawnParticle(SMOKE_BURST_SIZE, true);
+    if (!this.burstStarted) {
+      for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++) {
+        this.spawnParticle(SMOKE_BURST_SIZE, true);
+      }
+      this.burstStarted = true;
     }
   }
 
   updateAndCheckExistence(dt) {
     this.update(dt);
-    return this.timeSinceStoppedRendering < BULLET_REMOVAL_DELAY;
+    return this.shouldRenderBullet || this.particles.length > 0;
   }
   // returns true if bullet was successfully rendered
   // returns false if bullet was not rendered and should be deleted from animation queue
@@ -167,6 +173,30 @@ export class Bullet {
           .times(Mat4.scale(particle.scale, particle.scale, particle.scale)); // Adjust particle size
       const particleMaterial = this.materials.smoke.override({ color: color(0.4, 0.4, 0.4, particle.opacity) });
       this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
+    }
+  }
+
+  checkBulletCollision() {
+    for (let bullet of this.map.bullet_queue) {
+      if (bullet === this) continue; // Skip self
+
+      let bulletPosition = bullet.position.to3();
+      const bulletMin = bulletPosition.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+      const bulletMax = bulletPosition.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+      const thisMin = this.position.to3().minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+      const thisMax = this.position.to3().plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+      const xOverlap = thisMin[0] <= bulletMax[0] && thisMax[0] >= bulletMin[0];
+      const yOverlap = thisMin[1] <= bulletMax[1] && thisMax[1] >= bulletMin[1];
+      const zOverlap = thisMin[2] <= bulletMax[2] && thisMax[2] >= bulletMin[2];
+
+      if (xOverlap && zOverlap) {
+        this.shouldRenderBullet = false;
+        bullet.shouldRenderBullet = false;
+        this.spawnSmokeBurst();
+
+      }
     }
   }
 
