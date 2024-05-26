@@ -81,6 +81,8 @@ class Map {
         // reset member variables
         this.collisionMap = [];
         this.enemies = [];
+        this.bomb_queue = []
+        this.bullet_queue = []
 
         // parse schematic
         this.level = level;
