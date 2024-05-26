@@ -42,6 +42,9 @@ export class GameScene extends Scene {
         this.cursor_x = INITIAL_CURSOR_X;
         this.cursor_z = INITIAL_CURSOR_Z;
 
+        this.lastShotTime = 0;
+        this.shotCooldown = 200;
+
         // shapes
         this.shapes = {
             square: new defs.Square(),
@@ -143,8 +146,9 @@ export class GameScene extends Scene {
 
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
+        const t = program_state.animation_time;
 
-        if (!this.user.dead) {
+        if (!this.user.dead && (t - this.lastShotTime >= this.shotCooldown)) {
             if (this.user.clip <= 0) {
                 return;
             }
@@ -166,6 +170,7 @@ export class GameScene extends Scene {
             )
             this.map.bullet_queue.push(bullet);
             this.user.clip--
+            this.lastShotTime = t;
         }
     }
 
