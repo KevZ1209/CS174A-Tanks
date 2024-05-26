@@ -31,17 +31,14 @@ const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 3;
 
 export class Bullet {
-  constructor(x, z, angle, collisionMap) {
+  constructor(x, z, angle, collisionMap, shapes, materials) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.angle = angle;
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
     this.invinciblity = 0;
-    this.shapes = {
-      bullet: new Subdivision_Sphere(4),
-      sphere: new Subdivision_Sphere(3),
-    };
+    this.shapes = shapes;
 
     this.timeSinceStoppedRendering = 0;
     this.shouldRenderBullet = true;
@@ -50,19 +47,7 @@ export class Bullet {
     this.particleSpawnRate = PARTICLE_SPAWN_RATE;
     this.timeSinceLastSpawn = 0;
 
-    this.materials = {
-      bulletMaterial: new Material(new defs.Phong_Shader(), {
-        ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-      }),
-      smoke: new Material(new defs.Phong_Shader(), {
-        ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
-      }),
-      smokeCloud: new Material(new Textured_Phong(), {
-        ambient: .35, diffusivity: .8, specularity: 0.1,
-        color: hex_color("#d2d0d0"),
-        texture: new Texture("../assets/smoke_trail.png")
-      })
-    };
+    this.materials = materials;
   }
 
   update(dt) {
@@ -72,7 +57,6 @@ export class Bullet {
 
       // Spawn new particles
       if (this.timeSinceLastSpawn > this.particleSpawnRate) {
-        // this.spawnParticle(PARTICLE_OFFSET);
         this.spawnSmokeTrail()
         this.timeSinceLastSpawn = 0;
       }

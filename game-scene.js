@@ -46,6 +46,8 @@ export class GameScene extends Scene {
         this.shapes = {
             square: new defs.Square(),
             ammo: new Subdivision_Sphere(4),
+            bullet: new Subdivision_Sphere(4),
+            sphere: new Subdivision_Sphere(3),
         };
 
         // materials
@@ -59,6 +61,12 @@ export class GameScene extends Scene {
             }),
             ammo: new Material(new defs.Phong_Shader(), {
                 ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+            }),
+            bulletMaterial: new Material(new defs.Phong_Shader(), {
+                ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+            }),
+            smoke: new Material(new defs.Phong_Shader(), {
+                ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
             }),
         };
     }
@@ -151,7 +159,9 @@ export class GameScene extends Scene {
                 user_x,
                 user_z,
                 angle,
-                this.map.collisionMap
+                this.map.collisionMap,
+                this.shapes,
+                this.materials
             )
             this.map.bullet_queue.push(bullet);
             this.user.clip--
