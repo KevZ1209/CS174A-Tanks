@@ -15,6 +15,7 @@ const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = 3;
+const TANK_SPEED = 0.15;
 
 export class GameScene extends Scene {
     constructor() {
@@ -216,16 +217,16 @@ export class GameScene extends Scene {
         if (!this.user.dead) {
             let [new_x, new_z] = this.user.getPosition();
             if (this.direction.up) {
-                new_z -= 0.2;
+                new_z -= TANK_SPEED;
             }
             if (this.direction.down) {
-                new_z += 0.2;
+                new_z += TANK_SPEED;
             }
             if (this.direction.right) {
-                new_x += 0.2;
+                new_x += TANK_SPEED;
             }
             if (this.direction.left) {
-                new_x -= 0.2;
+                new_x -= TANK_SPEED;
             }
             this.user.updatePosition(new_x, new_z, this.direction);
         }
