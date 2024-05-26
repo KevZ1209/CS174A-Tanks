@@ -3,12 +3,11 @@ import { Map } from './components/map.js';
 import { Tank, TANK_TYPE_ENUM } from './components/tank.js';
 import { Bullet } from './components/bullet.js';
 import { schematics } from './components/map_schematics.js';
+import { Text_Line } from './examples/text-demo.js';
 
 const {
     vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Scene, Texture,
 } = tiny;
-
-const { Textured_Phong } = defs;
 
 const INITIAL_USER_X = -10;
 const INITIAL_USER_Z = -10;
@@ -40,7 +39,22 @@ export class GameScene extends Scene {
 
         this.initialized = false;
         this.state = TITLE_STATE;
+        this.continue = false;
         this.stateStart = 0;
+        this.textTransform = Mat4.rotation(-Math.PI / 2, 1, 0, 0)
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-1.5, 1.5, 1.5));
+        this.subtextTransform = Mat4.rotation(-Math.PI / 2, 1, 0, 0)
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-1, 1, 1));
+        this.bannerRedTransform = Mat4.translation(-5, 0, 15)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-60, 10, 1));
+        this.bannerPlainTransform = Mat4.translation(-5, 1.1, 15)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-60, 6, 1));
 
         // map
         this.map = new Map();
@@ -66,13 +80,14 @@ export class GameScene extends Scene {
             ammo: new Subdivision_Sphere(4),
             bullet: new Subdivision_Sphere(4),
             sphere: new Subdivision_Sphere(1),
+            text: new Text_Line(35)
         };
 
         // materials
         this.materials = {
             plastic: new Material(new defs.Phong_Shader(),
                 { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
-            cursor: new Material(new Textured_Phong(), {
+            cursor: new Material(new defs.Textured_Phong(), {
                 ambient: .4, diffusivity: .8, specularity: 0.1,
                 color: hex_color("#FFFFFF"),
                 texture: new Texture("assets/cursor.png")
@@ -86,6 +101,20 @@ export class GameScene extends Scene {
             smoke: new Material(new defs.Phong_Shader(), {
                 ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
             }),
+            banner_red: new Material(new defs.Textured_Phong(), {
+                ambient: .4, diffusivity: .8, specularity: 0.1,
+                color: hex_color("#D53C2D"),
+                texture: new Texture("assets/banner_red.png")
+            }),
+            banner_plain: new Material(new defs.Textured_Phong(), {
+                ambient: .5, diffusivity: .8, specularity: 0.1,
+                color: hex_color("#FFFFF6"),
+                texture: new Texture("assets/banner_plain.png")
+            }),
+            text_image: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/text.png")
+            })
         };
     }
 
@@ -177,13 +206,14 @@ export class GameScene extends Scene {
                 user_x,
                 user_z,
                 angle,
-                this.map.collisionMap,
                 this.shapes,
                 this.materials,
                 this.map
             )
             this.map.bullet_queue.push(bullet);
             this.user.clip--
+        } else if (this.state === LOSE_STATE) {
+            this.continue = true;
         }
     }
 
@@ -204,6 +234,23 @@ export class GameScene extends Scene {
                 .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
             this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
         }
+    }
+
+    moveUser() {
+        let [new_x, new_z] = this.user.getPosition();
+        if (this.direction.up) {
+            new_z -= TANK_SPEED;
+        }
+        if (this.direction.down) {
+            new_z += TANK_SPEED;
+        }
+        if (this.direction.right) {
+            new_x += TANK_SPEED;
+        }
+        if (this.direction.left) {
+            new_x -= TANK_SPEED;
+        }
+        this.user.updatePosition(new_x, new_z, this.direction);
     }
 
     display(context, program_state) {
@@ -237,20 +284,30 @@ export class GameScene extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
         // user cursor
-        let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 1.1, this.cursor_z))
+        let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 1.3, this.cursor_z))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.rotation(Math.PI / 2, 1, 0, 0));
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
         // ** Game Loop **
         if (this.state === TITLE_STATE) {
+            let text_transform = Mat4.translation(13, 1.1, 16).times(this.textTransform)
+            this.shapes.text.set_string("Tanks!", context.context);
+            this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
+            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+
             if (t - this.stateStart >= TITLE_STATE_DURATION) {
                 console.log("title state --> info state level " + this.level)
-                this.level = 0;
+                this.level = 1;
                 this.state = LEVEL_INFO_STATE;
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_INFO_STATE) {
+            let model_transform = Mat4.translation(12, 1.1, 16).times(this.textTransform)
+            this.shapes.text.set_string(`Level ${this.level}`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+
             if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
                 console.log(`info for level ${this.level} --> starting level ${this.level}`)
                 this.map.initializeLevel(this.level);
@@ -269,20 +326,7 @@ export class GameScene extends Scene {
             }
         } else if (this.state === LEVEL_STATE) {
             if (!this.user.dead) {
-                let [new_x, new_z] = this.user.getPosition();
-                if (this.direction.up) {
-                    new_z -= TANK_SPEED;
-                }
-                if (this.direction.down) {
-                    new_z += TANK_SPEED;
-                }
-                if (this.direction.right) {
-                    new_x += TANK_SPEED;
-                }
-                if (this.direction.left) {
-                    new_x -= TANK_SPEED;
-                }
-                this.user.updatePosition(new_x, new_z, this.direction);
+                this.moveUser()
                 this.map.render(context, program_state);
                 this.user.render(context, program_state);
                 this.renderAmmoIndicator(context, program_state);
@@ -305,11 +349,16 @@ export class GameScene extends Scene {
                 }
             } else {
                 console.log(`level ${this.level} --> lose`)
-                this.level = 0;
                 this.state = LOSE_STATE;
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_CLEARED_STATE) {
+            let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+            this.shapes.text.set_string(`Level Cleared!`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+
+            this.moveUser()
             this.map.render(context, program_state);
             this.user.render(context, program_state);
             this.renderAmmoIndicator(context, program_state);
@@ -327,7 +376,35 @@ export class GameScene extends Scene {
                 }
             }
         } else if (this.state === LOSE_STATE) {
+            let model_transform1 = Mat4.translation(4, 1.2, 13).times(this.textTransform)
+            this.shapes.text.set_string(`Mission Failed`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform1, this.materials.text_image);
+
+            let model_transform2 = Mat4.translation(1, 1.2, 17).times(this.subtextTransform)
+            this.shapes.text.set_string(`Click anywhere to restart`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
+            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+
+            this.map.render(context, program_state);
+            this.user.render(context, program_state);
+            this.renderAmmoIndicator(context, program_state);
+
+            if (this.continue) {
+                this.level = 1;
+                this.state = LEVEL_INFO_STATE;
+                this.stateStart = t;
+            }
         } else if (this.state === WIN_STATE) {
+            let model_transform = Mat4.translation(12, 1.2, 13).times(this.textTransform)
+            this.shapes.text.set_string(`You Win!`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+
+            let model_transform2 = Mat4.translation(7, 1.2, 17).times(this.subtextTransform)
+            this.shapes.text.set_string(`Thanks for playing`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
+            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
         }
     }
 }

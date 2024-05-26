@@ -35,11 +35,10 @@ const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
-  constructor(x, z, angle, collisionMap, shapes, materials, map) {
+  constructor(x, z, angle, shapes, materials, map) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
-    this.collisionMap = collisionMap;
     this.invinciblity = 0;
 
     this.shapes = shapes;
@@ -224,7 +223,7 @@ export class Bullet {
     let position = this.position.to3();
     const candidate_blocks = [];
 
-    for (let elem of this.collisionMap) {
+    for (let elem of this.map.collisionMap) {
       if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
         const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
         const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));

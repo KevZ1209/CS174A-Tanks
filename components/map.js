@@ -83,6 +83,7 @@ class Map {
         this.enemies = [];
         this.bomb_queue = []
         this.bullet_queue = []
+        this.user.dead = false;
 
         // parse schematic
         this.level = level;
