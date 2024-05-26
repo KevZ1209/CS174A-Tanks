@@ -2,6 +2,7 @@ import { defs, tiny, Subdivision_Sphere } from './examples/common.js';
 import { Map } from './components/map.js';
 import { Tank, TANK_TYPE_ENUM } from './components/tank.js';
 import { Bullet } from './components/bullet.js';
+import { schematics } from './components/map_schematics.js';
 
 const {
     vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Scene, Texture,
@@ -14,8 +15,23 @@ const INITIAL_USER_Z = -10;
 const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
-const MAX_LEVELS = 3;
+const MAX_LEVELS = schematics.length;
 const TANK_SPEED = 0.15;
+
+const TITLE_STATE = 0;
+const LEVEL_INFO_STATE = 1;
+const LEVEL_START_STATE = 2;
+const LEVEL_STATE = 3;
+const LEVEL_CLEARED_STATE = 4;
+const PAUSED_STATE = 5;
+const LOSE_STATE = 6;
+const WIN_STATE = 7;
+
+// durations in seconds
+const TITLE_STATE_DURATION = 4000;
+const LEVEL_INFO_STATE_DURATION = 4000;
+const LEVEL_START_STATE_DURATION = 3000;
+const LEVEL_CLEARED_STATE_DURATION = 3000;
 
 export class GameScene extends Scene {
     constructor() {
@@ -23,6 +39,8 @@ export class GameScene extends Scene {
         super();
 
         this.initialized = false;
+        this.state = TITLE_STATE;
+        this.stateStart = 0;
 
         // map
         this.map = new Map();
@@ -85,7 +103,7 @@ export class GameScene extends Scene {
         this.key_triggered_button("Move Right", ["d"], () => { this.direction.right = true },
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
-        this.key_triggered_button("Place Bomb", ["e"], () => { this.user.placeBomb() },
+        this.key_triggered_button("Place Bomb", ["e"], () => this.handleBomb(),
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Next Level", ["l"], () => {
@@ -144,7 +162,7 @@ export class GameScene extends Scene {
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
 
-        if (!this.user.dead) {
+        if (this.state === LEVEL_STATE && !this.user.dead) {
             if (this.user.clip <= 0) {
                 return;
             }
@@ -166,6 +184,12 @@ export class GameScene extends Scene {
             )
             this.map.bullet_queue.push(bullet);
             this.user.clip--
+        }
+    }
+
+    handleBomb() {
+        if (this.state === LEVEL_STATE && !this.user.dead) {
+            this.user.placeBomb()
         }
     }
 
@@ -198,9 +222,6 @@ export class GameScene extends Scene {
 
             // remove default cursor
             canvas.style.cursor = "none";
-
-            // initialize level 0
-            this.map.initializeLevel(0);
         }
 
         // ** Render ** display all set perspective, lights, and models in the scene
@@ -215,34 +236,99 @@ export class GameScene extends Scene {
         const light_position = vec4(16, 20, 10, 1);
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
-        // map
-        this.map.render(context, program_state);
-
         // user cursor
         let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 1.1, this.cursor_z))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.rotation(Math.PI / 2, 1, 0, 0));
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
-        // user tank
-        if (!this.user.dead) {
-            let [new_x, new_z] = this.user.getPosition();
-            if (this.direction.up) {
-                new_z -= TANK_SPEED;
+        // ** Game Loop **
+        if (this.state === TITLE_STATE) {
+            if (t - this.stateStart >= TITLE_STATE_DURATION) {
+                console.log("title state --> info state level " + this.level)
+                this.level = 0;
+                this.state = LEVEL_INFO_STATE;
+                this.stateStart = t;
             }
-            if (this.direction.down) {
-                new_z += TANK_SPEED;
+        } else if (this.state === LEVEL_INFO_STATE) {
+            if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
+                console.log(`info for level ${this.level} --> starting level ${this.level}`)
+                this.map.initializeLevel(this.level);
+                this.state = LEVEL_START_STATE;
+                this.stateStart = t;
             }
-            if (this.direction.right) {
-                new_x += TANK_SPEED;
+        } else if (this.state === LEVEL_START_STATE) {
+            this.map.render(context, program_state);
+            this.user.render(context, program_state);
+            this.renderAmmoIndicator(context, program_state);
+
+            if (t - this.stateStart >= LEVEL_START_STATE_DURATION) {
+                console.log(`starting level ${this.level} --> level ${this.level}`)
+                this.state = LEVEL_STATE;
+                this.stateStart = t;
             }
-            if (this.direction.left) {
-                new_x -= TANK_SPEED;
+        } else if (this.state === LEVEL_STATE) {
+            if (!this.user.dead) {
+                let [new_x, new_z] = this.user.getPosition();
+                if (this.direction.up) {
+                    new_z -= TANK_SPEED;
+                }
+                if (this.direction.down) {
+                    new_z += TANK_SPEED;
+                }
+                if (this.direction.right) {
+                    new_x += TANK_SPEED;
+                }
+                if (this.direction.left) {
+                    new_x -= TANK_SPEED;
+                }
+                this.user.updatePosition(new_x, new_z, this.direction);
+                this.map.render(context, program_state);
+                this.user.render(context, program_state);
+                this.renderAmmoIndicator(context, program_state);
+
+                // if all enemies are dead, continue to the next level
+                let nextLevel = true;
+                for (let enemy of this.map.enemies) {
+                    if (enemy.dead) {
+                        nextLevel = nextLevel & true;
+                    } else {
+                        nextLevel = nextLevel & false;
+                    }
+                }
+
+                if (nextLevel) {
+                    console.log(`level ${this.level} --> cleared level ${this.level}`)
+                    this.level += 1;
+                    this.state = LEVEL_CLEARED_STATE;
+                    this.stateStart = t;
+                }
+            } else {
+                console.log(`level ${this.level} --> lose`)
+                this.level = 0;
+                this.state = LOSE_STATE;
+                this.stateStart = t;
             }
-            this.user.updatePosition(new_x, new_z, this.direction);
+        } else if (this.state === LEVEL_CLEARED_STATE) {
+            this.map.render(context, program_state);
+            this.user.render(context, program_state);
+            this.renderAmmoIndicator(context, program_state);
+
+            if (t - this.stateStart >= LEVEL_CLEARED_STATE_DURATION) {
+                if (this.level >= MAX_LEVELS) {
+                    console.log(`cleared level ${this.level} --> win`)
+                    this.state = WIN_STATE;
+                    this.stateStart = t;
+                } else {
+                    console.log(`cleared level ${this.level} --> starting level ${this.level}`)
+                    this.map.initializeLevel(this.level);
+                    this.state = LEVEL_START_STATE;
+                    this.stateStart = t;
+                }
+            }
+        } else if (this.state === LOSE_STATE) {
+        } else if (this.state === WIN_STATE) {
         }
-        this.user.render(context, program_state);
-        this.renderAmmoIndicator(context, program_state);
     }
 }
 
