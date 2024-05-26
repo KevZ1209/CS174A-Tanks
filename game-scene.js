@@ -47,7 +47,7 @@ export class GameScene extends Scene {
             square: new defs.Square(),
             ammo: new Subdivision_Sphere(4),
             bullet: new Subdivision_Sphere(4),
-            sphere: new Subdivision_Sphere(3),
+            sphere: new Subdivision_Sphere(1),
         };
 
         // materials

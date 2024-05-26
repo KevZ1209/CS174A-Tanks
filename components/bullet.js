@@ -20,15 +20,15 @@ const BULLET_REMOVAL_DELAY = 650;
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
 const PARTICLE_INITIAL_SCALE = 0.2;
-const PARTICLE_MAX_SCALE = .5;
+const PARTICLE_MAX_SCALE = .7;
 const PARTICLE_INITIAL_OPACITY = 0.37; // 0.4
 const PARTICLE_MAX_OPACITY = 0.6; // 0.46
 const PARTICLE_FADE_RATE = 0.2;
 
 const SMOKE_BURST_PARTICLE_COUNT = 50;
-const SMOKE_BURST_SIZE = 1.4;
+const SMOKE_BURST_SIZE = 1.6;
 const SMOKE_TRAIL_DENSITY = 0.5;
-const SMOKE_TRAIL_PARTICLE_COUNT = 3;
+const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
   constructor(x, z, angle, collisionMap, shapes, materials) {
