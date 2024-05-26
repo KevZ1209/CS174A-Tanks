@@ -43,6 +43,8 @@ export class GameScene extends Scene {
         this.state = DEV_STATE; // TODO: change this to TITLE_STATE for production
         this.continue = false;
         this.stateStart = 0;
+        this.startOpacity = 1;
+        this.startScale = 1;
         this.textTransform = Mat4.rotation(-Math.PI / 2, 1, 0, 0)
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-1.5, 1.5, 1.5));
@@ -342,6 +344,13 @@ export class GameScene extends Scene {
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_STATE) {
+            if (t <= this.stateStart + 1000) {
+                this.startOpacity -= dt;
+                let model_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform);
+                this.shapes.text.set_string(`Start!`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+            }
+
             if (!this.user.dead) {
                 this.moveUser()
                 this.map.render(context, program_state);
