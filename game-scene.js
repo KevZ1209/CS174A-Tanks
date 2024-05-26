@@ -25,12 +25,14 @@ const LEVEL_CLEARED_STATE = 4;
 const PAUSED_STATE = 5;
 const LOSE_STATE = 6;
 const WIN_STATE = 7;
+const DEV_STATE = 8;
 
 // durations in seconds
 const TITLE_STATE_DURATION = 4000;
 const LEVEL_INFO_STATE_DURATION = 4000;
 const LEVEL_START_STATE_DURATION = 3000;
 const LEVEL_CLEARED_STATE_DURATION = 3000;
+const BACKGROUND_SPEED = 1.5;
 
 export class GameScene extends Scene {
     constructor() {
@@ -38,7 +40,7 @@ export class GameScene extends Scene {
         super();
 
         this.initialized = false;
-        this.state = TITLE_STATE;
+        this.state = DEV_STATE; // TODO: change this to TITLE_STATE for production
         this.continue = false;
         this.stateStart = 0;
         this.textTransform = Mat4.rotation(-Math.PI / 2, 1, 0, 0)
@@ -47,7 +49,7 @@ export class GameScene extends Scene {
         this.subtextTransform = Mat4.rotation(-Math.PI / 2, 1, 0, 0)
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-1, 1, 1));
-        this.bannerRedTransform = Mat4.translation(-5, 0, 15)
+        this.bannerRedTransform = Mat4.translation(-5, 1, 15)
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-60, 10, 1));
@@ -55,6 +57,10 @@ export class GameScene extends Scene {
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-60, 6, 1));
+        this.backgroundTransform = Mat4.translation(12, 0.9, 16)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-40, 20, 20));
 
         // map
         this.map = new Map();
@@ -87,9 +93,8 @@ export class GameScene extends Scene {
         this.materials = {
             plastic: new Material(new defs.Phong_Shader(),
                 { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
-            cursor: new Material(new defs.Textured_Phong(), {
-                ambient: .4, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#FFFFFF"),
+            cursor: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/cursor.png")
             }),
             ammo: new Material(new defs.Phong_Shader(), {
@@ -101,20 +106,22 @@ export class GameScene extends Scene {
             smoke: new Material(new defs.Phong_Shader(), {
                 ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
             }),
-            banner_red: new Material(new defs.Textured_Phong(), {
-                ambient: .4, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#D53C2D"),
+            banner_red: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/banner_red.png")
             }),
-            banner_plain: new Material(new defs.Textured_Phong(), {
-                ambient: .5, diffusivity: .8, specularity: 0.1,
-                color: hex_color("#FFFFF6"),
+            banner_plain: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/banner_plain.png")
             }),
             text_image: new Material(new defs.Textured_Phong(1), {
                 ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/text.png")
-            })
+            }),
+            background: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/background.png")
+            }),
         };
     }
 
@@ -135,12 +142,16 @@ export class GameScene extends Scene {
         this.key_triggered_button("Place Bomb", ["e"], () => this.handleBomb(),
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
-        this.key_triggered_button("Next Level", ["l"], () => {
-            if (this.level < MAX_LEVELS) {
-                this.level += 1;
-                this.map.initializeLevel(this.level);
+        this.key_triggered_button("Toggle Dev Mode", ["l"], () => {
+            if (this.state === DEV_STATE) {
+                this.state = TITLE_STATE;
+            } else {
+                this.state = DEV_STATE;
+                this.map.initializeLevel(0);
             }
-        })
+        },
+            "#6E6460", () => { this.direction.right = false });
+        this.new_line();
     }
 
     // convert screen space position to world space position
@@ -191,7 +202,7 @@ export class GameScene extends Scene {
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
 
-        if (this.state === LEVEL_STATE && !this.user.dead) {
+        if ((this.state === LEVEL_STATE || this.state === DEV_STATE) && !this.user.dead) {
             if (this.user.clip <= 0) {
                 return;
             }
@@ -218,7 +229,7 @@ export class GameScene extends Scene {
     }
 
     handleBomb() {
-        if (this.state === LEVEL_STATE && !this.user.dead) {
+        if ((this.state === LEVEL_STATE || this.state === DEV_STATE) && !this.user.dead) {
             this.user.placeBomb()
         }
     }
@@ -269,6 +280,10 @@ export class GameScene extends Scene {
 
             // remove default cursor
             canvas.style.cursor = "none";
+
+            if (this.state === DEV_STATE) {
+                this.map.initializeLevel(0)
+            }
         }
 
         // ** Render ** display all set perspective, lights, and models in the scene
@@ -295,6 +310,7 @@ export class GameScene extends Scene {
             this.shapes.text.set_string("Tanks!", context.context);
             this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+            this.displayBackground(context, program_state);
 
             if (t - this.stateStart >= TITLE_STATE_DURATION) {
                 console.log("title state --> info state level " + this.level)
@@ -307,6 +323,7 @@ export class GameScene extends Scene {
             this.shapes.text.set_string(`Level ${this.level}`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+            this.displayBackground(context, program_state);
 
             if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
                 console.log(`info for level ${this.level} --> starting level ${this.level}`)
@@ -405,7 +422,24 @@ export class GameScene extends Scene {
             this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
             this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+            this.displayBackground(context, program_state);
+        } else if (this.state === DEV_STATE) {
+            this.moveUser()
+            this.map.render(context, program_state);
+            this.user.render(context, program_state);
+            this.renderAmmoIndicator(context, program_state);
+            this.stateStart = t;
         }
+    }
+
+    displayBackground(context, program_state) {
+        const t = program_state.animation_time / 1000;  // Convert to seconds
+
+        const translate_x = (t * BACKGROUND_SPEED) % 5;  // Wrap around using modulus
+        const translate_z = -(t * BACKGROUND_SPEED) % 5;  // Wrap around using modulus
+
+        let background_transform = Mat4.translation(translate_x, 0, translate_z).times(this.backgroundTransform)
+        this.shapes.square.draw(context, program_state, background_transform, this.materials.background);
     }
 }
 

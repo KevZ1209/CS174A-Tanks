@@ -49,14 +49,12 @@ class Tank {
     this.materials = {
       tank: new Material(new defs.Phong_Shader(),
         { ambient: .4, diffusivity: .6, color: this.type.color }),
-      user_x: new Material(new defs.Textured_Phong(), {
-        ambient: .3, diffusivity: .3, specularity: 0.0,
-        color: this.type.color,
+      user_x: new Material(new defs.Textured_Phong(1), {
+        ambient: 1, diffusivity: 0, specularity: 0,
         texture: new Texture("assets/user_x.png")
       }),
-      enemy_x: new Material(new defs.Textured_Phong(), {
-        ambient: .3, diffusivity: .2, specularity: 0.0,
-        color: hex_color("#ffffff"),
+      enemy_x: new Material(new defs.Textured_Phong(1), {
+        ambient: 1, diffusivity: 0, specularity: 0,
         texture: new Texture("assets/enemy_x.png")
       })
     }
