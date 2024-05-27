@@ -35,6 +35,7 @@ const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
+  static activeBullets = [];
   constructor(x, z, angle, shapes, materials, map) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
@@ -52,7 +53,11 @@ export class Bullet {
     this.particleSpawnRate = PARTICLE_SPAWN_RATE;
     this.timeSinceLastSpawn = 0;
 
+    this.burstStarted = false;
+
     this.materials = materials;
+
+    Bullet.activeBullets.push(this);
   }
 
   update(dt) {
@@ -75,6 +80,13 @@ export class Bullet {
       this.particles[i].update(dt);
       if (this.particles[i].isDead()) {
         this.particles.splice(i, 1);
+      }
+    }
+    if (!this.shouldRenderBullet) {
+      // Remove the bullet from the active bullets list when it stops rendering
+      const index = Bullet.activeBullets.indexOf(this);
+      if (index > -1) {
+        Bullet.activeBullets.splice(index, 1);
       }
     }
   }
@@ -107,14 +119,17 @@ export class Bullet {
     }
   }
   spawnSmokeBurst() {
-    for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++ ) {
-      this.spawnParticle(SMOKE_BURST_SIZE, true);
+    if (!this.burstStarted) {
+      for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++) {
+        this.spawnParticle(SMOKE_BURST_SIZE, true);
+      }
+      this.burstStarted = true;
     }
   }
 
   updateAndCheckExistence(dt) {
     this.update(dt);
-    return this.timeSinceStoppedRendering < BULLET_REMOVAL_DELAY;
+    return this.shouldRenderBullet || this.particles.length > 0;
   }
   // returns true if bullet was successfully rendered
   // returns false if bullet was not rendered and should be deleted from animation queue
@@ -136,6 +151,7 @@ export class Bullet {
     if (this.timeSinceFired >= BULLET_COLLISION_DELAY) {
       this.checkTankCollision();
       this.checkBombCollision();
+      this.checkBulletCollision()
     }
     // decrease invincibility frame
     this.invinciblity = this.invinciblity > 0 ? this.invinciblity - 1 : 0;
@@ -166,6 +182,36 @@ export class Bullet {
           .times(Mat4.scale(particle.scale, particle.scale, particle.scale)); // Adjust particle size
       const particleMaterial = this.materials.smoke.override({ color: color(0.4, 0.4, 0.4, particle.opacity) });
       this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
+    }
+  }
+
+  checkBulletCollision() {
+    let position = this.position.to3();
+    for (let bullet of Bullet.activeBullets) {
+      if (bullet !== this && bullet.shouldRenderBullet) { // Avoid self-collision and ensure the other bullet is active
+        let bulletPosition = bullet.position.to3();
+        const bulletMin = bulletPosition.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const bulletMax = bulletPosition.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+        const thisBulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const thisBulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+        const xOverlap = thisBulletMin[0] <= bulletMax[0] && thisBulletMax[0] >= bulletMin[0];
+        const yOverlap = thisBulletMin[1] <= bulletMax[1] && thisBulletMax[1] >= bulletMin[1];
+        const zOverlap = thisBulletMin[2] <= bulletMax[2] && thisBulletMax[2] >= bulletMin[2];
+
+        if (xOverlap && zOverlap) {
+          this.shouldRenderBullet = false;
+          bullet.shouldRenderBullet = false;
+          const index = Bullet.activeBullets.indexOf(this);
+          if (index > -1) {
+            Bullet.activeBullets.splice(index, 1);
+          }
+
+          this.spawnSmokeBurst();
+
+        }
+      }
     }
   }
 

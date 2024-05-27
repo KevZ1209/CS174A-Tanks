@@ -86,6 +86,9 @@ export class GameScene extends Scene {
         this.cursor_x = INITIAL_CURSOR_X;
         this.cursor_z = INITIAL_CURSOR_Z;
 
+        this.lastShotTime = 0;
+        this.shotCooldown = 200;
+
         // shapes
         this.shapes = {
             square: new defs.Square(),
@@ -207,8 +210,9 @@ export class GameScene extends Scene {
 
     handleMouseDown(e, program_state, rect) {
         e.preventDefault();
+        const t = program_state.animation_time;
 
-        if ((this.state === LEVEL_STATE || this.state === DEV_STATE) && !this.user.dead) {
+        if ((this.state === LEVEL_STATE || this.state === DEV_STATE) && !this.user.dead && (t - this.lastShotTime >= this.shotCooldown)) {
             if (this.user.clip <= 0) {
                 return;
             }
@@ -232,6 +236,7 @@ export class GameScene extends Scene {
         } else if (this.state === LOSE_STATE) {
             this.continue = true;
         }
+        this.lastShotTime = t;
     }
 
     handleBomb() {
@@ -346,7 +351,7 @@ export class GameScene extends Scene {
         } else if (this.state === LEVEL_STATE) {
             if (t <= this.stateStart + 1000) {
                 this.startOpacity -= dt;
-                let model_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform);
+                let model_transform = Mat4.translation(14, 1.2, 16).times(this.textTransform);
                 this.shapes.text.set_string(`Start!`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
             }
