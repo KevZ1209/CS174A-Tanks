@@ -319,17 +319,22 @@ export class GameScene extends Scene {
                 this.level = 1;
                 this.state = LEVEL_INFO_STATE;
                 this.stateStart = t;
+                this.map.initializeLevel(this.level);
             }
         } else if (this.state === LEVEL_INFO_STATE) {
-            let model_transform = Mat4.translation(12, 1.1, 16).times(this.textTransform)
+            let model_transform = Mat4.translation(12, 1.1, 13).times(this.textTransform)
             this.shapes.text.set_string(`Level ${this.level}`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+
+            let model_transform2 = Mat4.translation(9, 1.2, 17).times(this.subtextTransform)
+            this.shapes.text.set_string(`Enemy tanks: ${this.map.enemies.length}`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
 
             if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
                 console.log(`info for level ${this.level} --> starting level ${this.level}`)
-                this.map.initializeLevel(this.level);
                 this.state = LEVEL_START_STATE;
                 this.stateStart = t;
             }
@@ -396,9 +401,9 @@ export class GameScene extends Scene {
                     this.stateStart = t;
                 } else {
                     console.log(`cleared level ${this.level} --> starting level ${this.level}`)
-                    this.map.initializeLevel(this.level);
-                    this.state = LEVEL_START_STATE;
+                    this.state = LEVEL_INFO_STATE;
                     this.stateStart = t;
+                    this.map.initializeLevel(this.level);
                 }
             }
         } else if (this.state === LOSE_STATE) {
