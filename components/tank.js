@@ -48,6 +48,12 @@ class Tank {
     this.dead = false;
     this.body_orientation = Math.PI/2;
 
+    // AI movement
+    this.movementSpeed = 2;
+    this.targetPosition = null;
+    this.reachedTarget = true;
+    this.movementTimer = 0;
+
     this.materials = {
       tank: new Material(new defs.Phong_Shader(),
         { ambient: 0.3, diffusivity: 1, specularity: 0, color: this.type.color }),
@@ -109,12 +115,74 @@ class Tank {
         this.clip++;
         this.last_reload_time = t;
       }
+
+      if (this.type !== TANK_TYPE_ENUM.USER) {
+        this.updateAIMovement(dt);
+      }
+
+      if (this.targetPosition && !this.reachedTarget) {
+        this.moveTowardsTarget(dt);
+      }
+
     } else {
       // tank dead
       let model_transform = Mat4.translation(this.x, -0.9, this.z)
         .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
         .times(Mat4.scale(1.3, 1.3, 1.3))
       this.shapes.x.draw(context, program_state, model_transform, this.type === TANK_TYPE_ENUM.USER ? this.materials.user_x : this.materials.enemy_x);
+    }
+  }
+
+  updateAIMovement(dt) {
+    this.movementTimer += dt;
+    if (this.movementTimer >= 1) { // Move every second
+      this.movementTimer = 0;
+      this.moveRandomly();
+    }
+  }
+
+  moveRandomly() {
+    const directions = [
+      vec3(2, 0, 0),
+      vec3(-2, 0, 0),
+      vec3(0, 0, 2),
+      vec3(0, 0, -2),
+      vec3(2,0,2),
+      vec3(-2,0,2),
+      vec3(2,0,-2),
+      vec3(-2,0,-2),
+    ];
+
+    while (directions.length > 0) {
+      const randomIndex = Math.floor(Math.random() * directions.length);
+      const direction = directions.splice(randomIndex, 1)[0];
+      const newX = this.x + direction[0] * TANK_WIDTH * 2;
+      const newZ = this.z + direction[2] * TANK_DEPTH * 2;
+
+      if (!this.checkCollision(newX, newZ)) {
+        this.setTargetPosition(newX, newZ);
+        this.angle = Math.atan2(direction[0], direction[2]);
+        break;
+      }
+    }
+  }
+
+  setTargetPosition(new_x, new_z) {
+    this.targetPosition = vec3(new_x, 0, new_z);
+    this.reachedTarget = false;
+  }
+
+  moveTowardsTarget(dt) {
+    const direction = this.targetPosition.minus(vec3(this.x, 0, this.z)).normalized();
+    const distance = this.targetPosition.minus(vec3(this.x, 0, this.z)).norm();
+
+    if (distance <= this.movementSpeed * dt) {
+      this.x = this.targetPosition[0];
+      this.z = this.targetPosition[2];
+      this.reachedTarget = true;
+    } else {
+      this.x += direction[0] * this.movementSpeed * dt;
+      this.z += direction[2] * this.movementSpeed * dt;
     }
   }
 
