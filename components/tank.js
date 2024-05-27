@@ -134,12 +134,24 @@ class Tank {
   }
 
   updateAIMovement(dt) {
+    switch (this.type) {
+      case TANK_TYPE_ENUM.ENEMY_MOVING:
+        this.updateMovingEnemy(dt);
+        break;
+        // other cases for different tank types
+      default:
+        break;
+    }
+  }
+
+  updateMovingEnemy(dt) {
     this.movementTimer += dt;
     if (this.movementTimer >= 1) { // Move every second
       this.movementTimer = 0;
       this.moveRandomly();
     }
   }
+
 
   moveRandomly() {
     const directions = [
