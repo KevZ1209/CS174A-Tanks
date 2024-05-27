@@ -35,11 +35,11 @@ const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
-  constructor(x, z, angle, collisionMap, shapes, materials, map) {
+  static activeBullets = [];
+  constructor(x, z, angle, shapes, materials, map) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
-    this.collisionMap = collisionMap;
     this.invinciblity = 0;
 
     this.shapes = shapes;
@@ -56,6 +56,8 @@ export class Bullet {
     this.burstStarted = false;
 
     this.materials = materials;
+
+    Bullet.activeBullets.push(this);
   }
 
   update(dt) {
@@ -80,7 +82,13 @@ export class Bullet {
         this.particles.splice(i, 1);
       }
     }
-    this.checkBulletCollision();
+    if (!this.shouldRenderBullet) {
+      // Remove the bullet from the active bullets list when it stops rendering
+      const index = Bullet.activeBullets.indexOf(this);
+      if (index > -1) {
+        Bullet.activeBullets.splice(index, 1);
+      }
+    }
   }
 
   spawnParticle(offset, isFading) {
@@ -143,6 +151,7 @@ export class Bullet {
     if (this.timeSinceFired >= BULLET_COLLISION_DELAY) {
       this.checkTankCollision();
       this.checkBombCollision();
+      this.checkBulletCollision()
     }
     // decrease invincibility frame
     this.invinciblity = this.invinciblity > 0 ? this.invinciblity - 1 : 0;
@@ -177,25 +186,31 @@ export class Bullet {
   }
 
   checkBulletCollision() {
-    for (let bullet of this.map.bullet_queue) {
-      if (bullet === this) continue; // Skip self
+    let position = this.position.to3();
+    for (let bullet of Bullet.activeBullets) {
+      if (bullet !== this && bullet.shouldRenderBullet) { // Avoid self-collision and ensure the other bullet is active
+        let bulletPosition = bullet.position.to3();
+        const bulletMin = bulletPosition.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const bulletMax = bulletPosition.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
 
-      let bulletPosition = bullet.position.to3();
-      const bulletMin = bulletPosition.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
-      const bulletMax = bulletPosition.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const thisBulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const thisBulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
 
-      const thisMin = this.position.to3().minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
-      const thisMax = this.position.to3().plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const xOverlap = thisBulletMin[0] <= bulletMax[0] && thisBulletMax[0] >= bulletMin[0];
+        const yOverlap = thisBulletMin[1] <= bulletMax[1] && thisBulletMax[1] >= bulletMin[1];
+        const zOverlap = thisBulletMin[2] <= bulletMax[2] && thisBulletMax[2] >= bulletMin[2];
 
-      const xOverlap = thisMin[0] <= bulletMax[0] && thisMax[0] >= bulletMin[0];
-      const yOverlap = thisMin[1] <= bulletMax[1] && thisMax[1] >= bulletMin[1];
-      const zOverlap = thisMin[2] <= bulletMax[2] && thisMax[2] >= bulletMin[2];
+        if (xOverlap && zOverlap) {
+          this.shouldRenderBullet = false;
+          bullet.shouldRenderBullet = false;
+          const index = Bullet.activeBullets.indexOf(this);
+          if (index > -1) {
+            Bullet.activeBullets.splice(index, 1);
+          }
 
-      if (xOverlap && zOverlap) {
-        this.shouldRenderBullet = false;
-        bullet.shouldRenderBullet = false;
-        this.spawnSmokeBurst();
+          this.spawnSmokeBurst();
 
+        }
       }
     }
   }
@@ -254,7 +269,7 @@ export class Bullet {
     let position = this.position.to3();
     const candidate_blocks = [];
 
-    for (let elem of this.collisionMap) {
+    for (let elem of this.map.collisionMap) {
       if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
         const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
         const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
