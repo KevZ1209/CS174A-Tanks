@@ -15,9 +15,9 @@ const BULLET_DEPTH = 0.3;
 const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
-const BULLET_OFFSET = 1;
-const BULLET_SPEED = 7;
-const BULLET_REMOVAL_DELAY = 650;
+const BULLET_OFFSET = 2;
+const BULLET_SPEED = 10;
+const BULLET_REMOVAL_DELAY = 450;
 // Delay before bullet can hit a tank
 const BULLET_COLLISION_DELAY = 0.175;
 
