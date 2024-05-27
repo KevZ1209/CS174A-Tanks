@@ -15,7 +15,7 @@ const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = 3;
-const TANK_SPEED = 0.15;
+const TANK_SPEED = 0.1;
 
 export class GameScene extends Scene {
     constructor() {
