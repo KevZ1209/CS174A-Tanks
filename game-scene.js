@@ -247,17 +247,23 @@ export class GameScene extends Scene {
 
     moveUser() {
         let [new_x, new_z] = this.user.getPosition();
+
+        // count how many trues there are. If >= 2, reduce speed by a factor of sqrt(2)
+        const trueCount = Object.values(this.direction).reduce((count, value) => count + (value ? 1 : 0), 0);
+
+        const ADJUSTED_TANK_SPEED = trueCount >= 2 ? TANK_SPEED / Math.sqrt(2) : TANK_SPEED;
+
         if (this.direction.up) {
-            new_z -= TANK_SPEED;
+            new_z -= ADJUSTED_TANK_SPEED;
         }
         if (this.direction.down) {
-            new_z += TANK_SPEED;
+            new_z += ADJUSTED_TANK_SPEED;
         }
         if (this.direction.right) {
-            new_x += TANK_SPEED;
+            new_x += ADJUSTED_TANK_SPEED;
         }
         if (this.direction.left) {
-            new_x -= TANK_SPEED;
+            new_x -= ADJUSTED_TANK_SPEED;
         }
         this.user.updatePosition(new_x, new_z, this.direction);
     }
