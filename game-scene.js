@@ -16,22 +16,25 @@ const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = schematics.length;
 const TANK_SPEED = 0.15;
+const INITIAL_LIVES = 3;
 
 const TITLE_STATE = 0;
 const LEVEL_INFO_STATE = 1;
 const LEVEL_START_STATE = 2;
 const LEVEL_STATE = 3;
 const LEVEL_CLEARED_STATE = 4;
-const PAUSED_STATE = 5;
-const LOSE_STATE = 6;
-const WIN_STATE = 7;
-const DEV_STATE = 8;
+const LEVEL_FAILED_STATE = 5;
+const PAUSED_STATE = 6;
+const LOSE_STATE = 7;
+const WIN_STATE = 8;
+const DEV_STATE = 9;
 
 // durations in seconds
 const TITLE_STATE_DURATION = 4000;
 const LEVEL_INFO_STATE_DURATION = 4000;
 const LEVEL_START_STATE_DURATION = 3000;
 const LEVEL_CLEARED_STATE_DURATION = 3000;
+const LEVEL_FAILED_STATE_DURATION = 3000;
 const BACKGROUND_SPEED = 1.5;
 
 export class GameScene extends Scene {
@@ -77,6 +80,7 @@ export class GameScene extends Scene {
             left: false
         }
         this.map.user = this.user;
+        this.lives = INITIAL_LIVES;
 
         // cursor
         this.cursor_x = INITIAL_CURSOR_X;
@@ -236,19 +240,6 @@ export class GameScene extends Scene {
         }
     }
 
-    renderAmmoIndicator(context, program_state) {
-        const bullet_spacing = 1.3;
-        const start_x = -2;
-        const start_z = 29.5;
-
-        for (let i = 0; i < this.user.clip; i++) {
-            let bullet_transform = Mat4.identity()
-                .times(Mat4.translation(start_x + i * bullet_spacing, 5, start_z)) // Position bullets in front of the camera
-                .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
-            this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
-        }
-    }
-
     moveUser() {
         let [new_x, new_z] = this.user.getPosition();
         if (this.direction.up) {
@@ -322,13 +313,17 @@ export class GameScene extends Scene {
                 this.map.initializeLevel(this.level);
             }
         } else if (this.state === LEVEL_INFO_STATE) {
-            let model_transform = Mat4.translation(12, 1.1, 13).times(this.textTransform)
+            let model_transform = Mat4.translation(12, 1.1, 12).times(this.textTransform)
             this.shapes.text.set_string(`Level ${this.level}`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
 
-            let model_transform2 = Mat4.translation(9, 1.2, 17).times(this.subtextTransform)
+            let model_transform2 = Mat4.translation(9, 1.2, 16).times(this.subtextTransform)
             this.shapes.text.set_string(`Enemy tanks: ${this.map.enemies.length}`, context.context);
             this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
+            let model_transform3 = Mat4.translation(13.5, 1.2, 18.7).times(this.subtextTransform)
+            this.shapes.text.set_string(`Lives: ${this.lives}`, context.context);
+            this.shapes.text.draw(context, program_state, model_transform3, this.materials.text_image);
 
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
@@ -341,7 +336,7 @@ export class GameScene extends Scene {
         } else if (this.state === LEVEL_START_STATE) {
             this.map.render(context, program_state);
             this.user.render(context, program_state);
-            this.renderAmmoIndicator(context, program_state);
+            this.renderUserInfo(context, program_state);
 
             if (t - this.stateStart >= LEVEL_START_STATE_DURATION) {
                 console.log(`starting level ${this.level} --> level ${this.level}`)
@@ -360,7 +355,7 @@ export class GameScene extends Scene {
                 this.moveUser()
                 this.map.render(context, program_state);
                 this.user.render(context, program_state);
-                this.renderAmmoIndicator(context, program_state);
+                this.renderUserInfo(context, program_state);
 
                 // if all enemies are dead, continue to the next level
                 let nextLevel = true;
@@ -379,20 +374,22 @@ export class GameScene extends Scene {
                     this.stateStart = t;
                 }
             } else {
-                console.log(`level ${this.level} --> lose`)
-                this.state = LOSE_STATE;
+                this.lives--;
+                console.log(`level ${this.level} --> failed level ${this.level}`)
+                this.state = LEVEL_FAILED_STATE;
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_CLEARED_STATE) {
-            let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
-            this.shapes.text.set_string(`Level Cleared!`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
-            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+            if (t - this.stateStart >= 1000) {
+                let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+                this.shapes.text.set_string(`Level Cleared!`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+            }
 
-            this.moveUser()
             this.map.render(context, program_state);
             this.user.render(context, program_state);
-            this.renderAmmoIndicator(context, program_state);
+            this.renderUserInfo(context, program_state);
 
             if (t - this.stateStart >= LEVEL_CLEARED_STATE_DURATION) {
                 if (this.level >= MAX_LEVELS) {
@@ -401,6 +398,30 @@ export class GameScene extends Scene {
                     this.stateStart = t;
                 } else {
                     console.log(`cleared level ${this.level} --> starting level ${this.level}`)
+                    this.state = LEVEL_INFO_STATE;
+                    this.stateStart = t;
+                    this.map.initializeLevel(this.level);
+                }
+            }
+        } else if (this.state === LEVEL_FAILED_STATE) {
+            if (t - this.stateStart >= 1000) {
+                let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+                this.shapes.text.set_string(`Level Failed`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+            }
+
+            this.map.render(context, program_state);
+            this.user.render(context, program_state);
+            this.renderUserInfo(context, program_state);
+
+            if (t - this.stateStart >= LEVEL_FAILED_STATE_DURATION) {
+                if (this.lives === 0) {
+                    console.log(`failed level ${this.level} --> lose`)
+                    this.state = LOSE_STATE;
+                    this.stateStart = t;
+                } else {
+                    console.log(`failed level ${this.level} --> info for level ${this.level}`)
                     this.state = LEVEL_INFO_STATE;
                     this.stateStart = t;
                     this.map.initializeLevel(this.level);
@@ -415,16 +436,16 @@ export class GameScene extends Scene {
             this.shapes.text.set_string(`Click anywhere to restart`, context.context);
             this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
-
-            this.map.render(context, program_state);
-            this.user.render(context, program_state);
-            this.renderAmmoIndicator(context, program_state);
+            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+            this.displayBackground(context, program_state);
 
             if (this.continue) {
+                console.log(`lose --> info for level 1`)
                 this.level = 1;
                 this.state = LEVEL_INFO_STATE;
                 this.stateStart = t;
+                this.lives = INITIAL_LIVES;
+                this.user.dead = false;
             }
         } else if (this.state === WIN_STATE) {
             let model_transform = Mat4.translation(12, 1.2, 13).times(this.textTransform)
@@ -443,7 +464,7 @@ export class GameScene extends Scene {
             }
             this.map.render(context, program_state);
             this.user.render(context, program_state);
-            this.renderAmmoIndicator(context, program_state);
+            this.renderUserInfo(context, program_state);
             this.stateStart = t;
         }
     }
@@ -456,6 +477,32 @@ export class GameScene extends Scene {
 
         let background_transform = Mat4.translation(translate_x, 0, translate_z).times(this.backgroundTransform)
         this.shapes.square.draw(context, program_state, background_transform, this.materials.background);
+    }
+
+    renderUserInfo(context, program_state) {
+        // text
+        let lives_transform = Mat4.translation(-3, 1.2, 27.8)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-0.6, 0.6, 0.6));
+        this.shapes.text.set_string(`Lives: ${this.lives}`, context.context);
+        this.shapes.text.draw(context, program_state, lives_transform, this.materials.text_image);
+
+        // banner
+        let banner_transform = Mat4.translation(-5, 1.1, 28.3)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-12, 2, 1));
+        this.shapes.square.draw(context, program_state, banner_transform, this.materials.banner_red);
+
+        // ammo
+        const bullet_spacing = 1.3;
+        for (let i = 0; i < this.user.clip; i++) {
+            let bullet_transform = Mat4.identity()
+                .times(Mat4.translation(-0.6 + i * bullet_spacing, 5, 29)) // Position bullets in front of the camera
+                .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
+            this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
+        }
     }
 }
 
