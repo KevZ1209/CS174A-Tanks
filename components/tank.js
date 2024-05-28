@@ -11,6 +11,8 @@ const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.5;
 const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 2500;
+const MOVEMENT_SPEED = 2;
+const ROTATION_SPEED = 1;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -49,8 +51,10 @@ class Tank {
     this.body_orientation = Math.PI/2;
 
     // AI movement
-    this.movementSpeed = 2;
+    this.movementSpeed = MOVEMENT_SPEED;
+    this.rotationSpeed = ROTATION_SPEED;
     this.targetPosition = null;
+    this.targetAngle = null;
     this.reachedTarget = true;
     this.movementTimer = 0;
 
@@ -121,7 +125,11 @@ class Tank {
       }
 
       if (this.targetPosition && !this.reachedTarget) {
-        this.moveTowardsTarget(dt);
+        if (this.targetAngle !== null && Math.abs(this.angle - this.targetAngle) > 0.01) {
+          this.rotateTowardsTargetAngle(dt);
+        } else {
+          this.moveTowardsTarget(dt);
+        }
       }
 
     } else {
@@ -173,7 +181,7 @@ class Tank {
 
       if (!this.checkCollision(newX, newZ)) {
         this.setTargetPosition(newX, newZ);
-        this.angle = Math.atan2(direction[0], direction[2]);
+        this.targetAngle = Math.atan2(direction[0], direction[2]);
         break;
       }
     }
@@ -195,6 +203,17 @@ class Tank {
     } else {
       this.x += direction[0] * this.movementSpeed * dt;
       this.z += direction[2] * this.movementSpeed * dt;
+    }
+  }
+
+  rotateTowardsTargetAngle(dt) {
+    const angleDifference = this.targetAngle - this.angle;
+    const rotationSpeed = Math.PI * this.rotationSpeed * dt;
+
+    if (Math.abs(angleDifference) < rotationSpeed) {
+      this.angle = this.targetAngle;
+    } else {
+      this.angle += Math.sign(angleDifference) * rotationSpeed;
     }
   }
 
