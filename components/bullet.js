@@ -37,7 +37,7 @@ const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 export class Bullet {
   static activeBullets = [];
   constructor(x, z, angle, collisionMap, shapes, materials, map) {
-    this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), 1, z + BULLET_OFFSET * Math.cos(angle), 1);
+    this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), -0.5, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
     this.collisionMap = collisionMap;
@@ -201,7 +201,7 @@ export class Bullet {
         const yOverlap = thisBulletMin[1] <= bulletMax[1] && thisBulletMax[1] >= bulletMin[1];
         const zOverlap = thisBulletMin[2] <= bulletMax[2] && thisBulletMax[2] >= bulletMin[2];
 
-        if (xOverlap && zOverlap) {
+        if (xOverlap && yOverlap && zOverlap) {
           this.shouldRenderBullet = false;
           bullet.shouldRenderBullet = false;
           const index = Bullet.activeBullets.indexOf(this);
@@ -231,7 +231,7 @@ export class Bullet {
       const yOverlap = bulletMin[1] <= tankMax[1] && bulletMax[1] >= tankMin[1];
       const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
 
-      if (xOverlap && zOverlap && !tank.dead) {
+      if (xOverlap && yOverlap && zOverlap && !tank.dead) {
         tank.dead = true;
         this.shouldRenderBullet = false;
         this.spawnSmokeBurst();
@@ -258,7 +258,7 @@ export class Bullet {
       const yOverlap = bulletMin[1] <= bombMax[1] && bulletMax[1] >= bombMin[1];
       const zOverlap = bulletMin[2] <= bombMax[2] && bulletMax[2] >= bombMin[2];
 
-      if (xOverlap  && zOverlap) {
+      if (xOverlap && yOverlap && zOverlap) {
         bomb.triggerExplosion();
         this.shouldRenderBullet = false;
         this.spawnSmokeBurst();
