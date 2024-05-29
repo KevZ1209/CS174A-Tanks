@@ -232,6 +232,7 @@ export class GameScene extends Scene {
                 this.map
             )
             this.map.bullet_queue.push(bullet);
+            bullet.spawnSmokeBurst();
             this.user.clip--
         } else if (this.state === LOSE_STATE) {
             this.continue = true;

@@ -34,6 +34,7 @@ const SMOKE_BURST_SIZE = 1.6;
 const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
+
 export class Bullet {
   static activeBullets = [];
   constructor(x, z, angle, shapes, materials, map) {
@@ -41,7 +42,7 @@ export class Bullet {
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
     this.invinciblity = 0;
-
+    this.justShot = false;
     this.shapes = shapes;
     this.map = map;
 
@@ -53,7 +54,7 @@ export class Bullet {
     this.particleSpawnRate = PARTICLE_SPAWN_RATE;
     this.timeSinceLastSpawn = 0;
 
-    this.burstStarted = false;
+    this.burstCount = 0;
 
     this.materials = materials;
 
@@ -119,11 +120,11 @@ export class Bullet {
     }
   }
   spawnSmokeBurst() {
-    if (!this.burstStarted) {
+    if (this.burstCount < 2) {
       for (let i = 0; i < SMOKE_BURST_PARTICLE_COUNT; i++) {
         this.spawnParticle(SMOKE_BURST_SIZE, true);
       }
-      this.burstStarted = true;
+      this.burstCount++;
     }
   }
 
