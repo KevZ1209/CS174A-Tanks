@@ -3,10 +3,11 @@ import { Shape_From_File } from '../examples/obj-file-demo.js';
 import { Bomb } from './bomb.js';
 
 const { vec3, hex_color, Mat4, Material, Texture } = tiny;
+const { Textured_Phong } = defs;
 
 const TANK_SCALE = 0.9;
 const TANK_WIDTH = 0.5;
-const TANK_HEIGHT = 1;
+const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.5;
 const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 2500;
@@ -45,23 +46,37 @@ class Tank {
     this.clip = MAX_CLIP_SIZE;
     this.last_reload_time = 0;
     this.dead = false;
+    this.body_orientation = Math.PI/2; // to determine tank body orientation
 
     this.materials = {
       tank: new Material(new defs.Phong_Shader(),
-        { ambient: .4, diffusivity: .6, color: this.type.color }),
+        { ambient: 0.3, diffusivity: 1, specularity: 0, color: this.type.color }),
+      turret: new Material(new defs.Phong_Shader(),
+          { ambient: 0.3, diffusivity: 1, specularity: 0, color: this.type.color }),
+      turret_test: new Material(new Textured_Phong(), {
+        ambient: .35, diffusivity: .8, specularity: 0.1,
+        color: this.type.color,
+        texture: new Texture("assets/cork.jpg")
+      }),
+      tank_test: new Material(new Textured_Phong(), {
+        ambient: .4, diffusivity: .8, specularity: 0.1,
+        color: this.type.color,
+        texture: new Texture("assets/map_background.jpg")
+      }),
       user_x: new Material(new defs.Textured_Phong(), {
         ambient: .3, diffusivity: .3, specularity: 0.0,
         color: this.type.color,
         texture: new Texture("assets/user_x.png")
       }),
-      enemy_x: new Material(new defs.Textured_Phong(), {
-        ambient: .3, diffusivity: .2, specularity: 0.0,
-        color: hex_color("#ffffff"),
+      enemy_x: new Material(new defs.Textured_Phong(1), {
+        ambient: 1, diffusivity: 0, specularity: 0,
         texture: new Texture("assets/enemy_x.png")
       })
     }
     this.shapes = {
       tank: new Shape_From_File("assets/tank.obj"),
+      turret: new Shape_From_File("assets/turret.obj"),
+      tankbody: new Shape_From_File("assets/tankbody.obj"),
       x: new defs.Square()
     }
   }
@@ -69,9 +84,20 @@ class Tank {
   render(context, program_state) {
     if (!this.dead) {
       // tank alive
-      let model_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
-        .times(Mat4.rotation(this.angle, 0, 1, 0));
-      this.shapes.tank.draw(context, program_state, model_transform, this.materials.tank);
+      let turret_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
+        .times(Mat4.rotation(this.angle + Math.PI, 0, 3, 0)
+        // extra scale & translation for 3d object
+        .times(Mat4.scale(0.4, 0.4, 0.4)
+        .times(Mat4.translation(0, 1, -3.5))));
+
+      let tankbody_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
+          .times(Mat4.scale(1, 1, 1))
+          .times(Mat4.translation(0, 0, 0))
+          .times(Mat4.rotation(this.body_orientation, 0, 1, 0));
+
+      this.shapes.turret.draw(context, program_state, turret_transform, this.materials.turret_test);
+      this.shapes.tankbody.draw(context, program_state, tankbody_transform, this.materials.tank_test);
+
 
       const t = program_state.animation_time;
       const dt = program_state.animation_delta_time / 1000;
@@ -94,21 +120,50 @@ class Tank {
 
   updatePosition(new_x, new_z, direction = null) {
     if (direction) {
+
+      // up, down, left, right
+      let position_changes = [false, false, false, false]
+
+
       // Update X position
       let potential_new_x = new_x;
       if (direction.right && !this.checkCollision(potential_new_x, this.z)) {
         this.x = potential_new_x;
+        position_changes[3] = true;
       } else if (direction.left && !this.checkCollision(potential_new_x, this.z)) {
         this.x = potential_new_x;
+        position_changes[2] = true;
       }
 
       // Update Z position
       let potential_new_z = new_z;
       if (direction.up && !this.checkCollision(this.x, potential_new_z)) {
         this.z = potential_new_z;
+        position_changes[0] = true;
       } else if (direction.down && !this.checkCollision(this.x, potential_new_z)) {
         this.z = potential_new_z;
+        position_changes[1] = true;
       }
+
+      let position_changes_str = JSON.stringify(position_changes)
+
+      // determine correct body orientation based on position_changes
+      // RIGHT or LEFT
+      if (position_changes_str === "[false,false,true,false]" || position_changes_str === "[false,false,false,true]") {
+        this.body_orientation = Math.PI/2;
+      }
+      // UP-RIGHT or DOWN-LEFT
+      if (position_changes_str === "[true,false,false,true]" || position_changes_str === "[false,true,true,false]") {
+        this.body_orientation = 3*Math.PI/4;
+      }
+      // LEFT-RIGHT or DOWN-RIGHT
+      if (position_changes_str === "[false,true,false,true]" || position_changes_str === "[true,false,true,false]") {
+        this.body_orientation = Math.PI/4;
+      }
+      if (position_changes_str === "[true,false,false,false]" || position_changes_str === "[false,true,false,false]") {
+        this.body_orientation = 0;
+      }
+
     } else {
       // update without collision detection
       this.x = new_x;

@@ -15,9 +15,9 @@ const BULLET_DEPTH = 0.3;
 const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
-const BULLET_OFFSET = 1;
-const BULLET_SPEED = 7;
-const BULLET_REMOVAL_DELAY = 650;
+const BULLET_OFFSET = 2;
+const BULLET_SPEED = 10;
+const BULLET_REMOVAL_DELAY = 450;
 // Delay before bullet can hit a tank
 const BULLET_COLLISION_DELAY = 0.175;
 
@@ -36,11 +36,10 @@ const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
   static activeBullets = [];
-  constructor(x, z, angle, collisionMap, shapes, materials, map) {
+  constructor(x, z, angle, shapes, materials, map) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), -0.5, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
-    this.collisionMap = collisionMap;
     this.invinciblity = 0;
 
     this.shapes = shapes;
@@ -270,7 +269,7 @@ export class Bullet {
     let position = this.position.to3();
     const candidate_blocks = [];
 
-    for (let elem of this.collisionMap) {
+    for (let elem of this.map.collisionMap) {
       if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
         const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
         const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
