@@ -35,6 +35,7 @@ const LEVEL_INFO_STATE_DURATION = 4000;
 const LEVEL_START_STATE_DURATION = 3000;
 const LEVEL_CLEARED_STATE_DURATION = 3000;
 const LEVEL_FAILED_STATE_DURATION = 3000;
+const LEVEL_DURATION = 32000;
 const BACKGROUND_SPEED = 1.5;
 
 export class GameScene extends Scene {
@@ -380,33 +381,42 @@ export class GameScene extends Scene {
                 this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
             }
 
-            if (!this.user.dead) {
-                this.moveUser()
-                this.map.render(context, program_state);
-                this.user.render(context, program_state);
-                this.renderUserInfo(context, program_state);
-
-                // if all enemies are dead, continue to the next level
-                let nextLevel = true;
-                for (let enemy of this.map.enemies) {
-                    if (enemy.dead) {
-                        nextLevel = nextLevel & true;
-                    } else {
-                        nextLevel = nextLevel & false;
-                    }
-                }
-
-                if (nextLevel) {
-                    console.log(`level ${this.level} --> cleared level ${this.level}`)
-                    this.level += 1;
-                    this.state = LEVEL_CLEARED_STATE;
-                    this.stateStart = t;
-                }
-            } else {
+            if (t > this.stateStart + LEVEL_DURATION) {
+                // level timeout
+                console.log(`level ${this.level} --> failed level ${this.level} due to timeout`)
                 this.lives--;
-                console.log(`level ${this.level} --> failed level ${this.level}`)
                 this.state = LEVEL_FAILED_STATE;
                 this.stateStart = t;
+            } else {
+                if (!this.user.dead) {
+                    this.moveUser()
+                    this.map.render(context, program_state);
+                    this.user.render(context, program_state);
+                    this.renderUserInfo(context, program_state);
+
+                    // if all enemies are dead, continue to the next level
+                    let nextLevel = true;
+                    for (let enemy of this.map.enemies) {
+                        if (enemy.dead) {
+                            nextLevel = nextLevel & true;
+                        } else {
+                            nextLevel = nextLevel & false;
+                        }
+                    }
+
+                    if (nextLevel) {
+                        console.log(`level ${this.level} --> cleared level ${this.level}`)
+                        this.level += 1;
+                        this.state = LEVEL_CLEARED_STATE;
+                        this.stateStart = t;
+                    }
+                } else {
+                    // user died
+                    console.log(`level ${this.level} --> failed level ${this.level} due to user death`);
+                    this.lives--;
+                    this.state = LEVEL_FAILED_STATE;
+                    this.stateStart = t;
+                }
             }
         } else if (this.state === LEVEL_CLEARED_STATE) {
             if (t - this.stateStart >= 1000) {
