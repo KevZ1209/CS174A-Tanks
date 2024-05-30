@@ -1,4 +1,4 @@
-import { defs, tiny, Subdivision_Sphere } from './examples/common.js';
+import { defs, tiny, Subdivision_Sphere, Cube } from './examples/common.js';
 import { Map } from './components/map.js';
 import { Tank, TANK_TYPE_ENUM } from './components/tank.js';
 import { Bullet } from './components/bullet.js';
@@ -88,6 +88,8 @@ export class GameScene extends Scene {
 
         this.lastShotTime = 0;
         this.shotCooldown = 200;
+        this.haveUnlimitedBullets = false;
+        this.hitboxOn = false;
 
         // shapes
         this.shapes = {
@@ -95,7 +97,8 @@ export class GameScene extends Scene {
             ammo: new Subdivision_Sphere(4),
             bullet: new Subdivision_Sphere(4),
             sphere: new Subdivision_Sphere(1),
-            text: new Text_Line(35)
+            text: new Text_Line(35),
+            cube: new defs.Cube()
         };
 
         // materials
@@ -131,6 +134,8 @@ export class GameScene extends Scene {
                 ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/background.png")
             }),
+            hitbox: new Material(new defs.Phong_Shader(),
+                { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
         };
     }
 
@@ -161,6 +166,15 @@ export class GameScene extends Scene {
         },
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
+        this.key_triggered_button("Unlimited Bullets", ["u"], () => {
+            this.haveUnlimitedBullets = !this.haveUnlimitedBullets;
+        },
+            "#6E6460", () => { this.direction.right = false});
+        this.new_line();
+        this.key_triggered_button("Hitbox on", ["h"], () => {
+                this.hitboxOn = !this.hitboxOn;
+            },
+            "#6E6460", () => { this.direction.right = false });
     }
 
     // convert screen space position to world space position
@@ -229,11 +243,14 @@ export class GameScene extends Scene {
                 angle,
                 this.shapes,
                 this.materials,
-                this.map
+                this.map,
+                this.hitboxOn
             )
             this.map.bullet_queue.push(bullet);
             bullet.spawnSmokeBurst();
-            this.user.clip--
+            if (!this.haveUnlimitedBullets) {
+                this.user.clip--;
+            }
         } else if (this.state === LOSE_STATE) {
             this.continue = true;
         }

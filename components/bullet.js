@@ -7,7 +7,7 @@ import { Bomb, BOMB_WIDTH, BOMB_HEIGHT, BOMB_DEPTH } from './bomb.js';
 const { vec3, vec4, hex_color, Mat4, Material, color, Texture } = tiny;
 const { Textured_Phong } = defs;
 
-const BULLET_SCALE = 0.5;
+const BULLET_SCALE = 0.51;
 const BULLET_SPHERE_SCALE = 0.25;
 const BULLET_WIDTH = 0.3;
 const BULLET_HEIGHT = 0.3;
@@ -37,14 +37,15 @@ const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
   static activeBullets = [];
-  constructor(x, z, angle, shapes, materials, map) {
+  constructor(x, z, angle, shapes, materials, map, hitboxOn) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), -0.5, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
     this.invinciblity = 0;
-    this.justShot = false;
     this.shapes = shapes;
     this.map = map;
+    this.lastCollidedBlock = null;
+    this.hitboxOn = hitboxOn;
 
     this.timeSinceStoppedRendering = 0;
     this.shouldRenderBullet = true;
@@ -132,6 +133,28 @@ export class Bullet {
     this.update(dt);
     return this.shouldRenderBullet || this.particles.length > 0;
   }
+
+  drawHitbox(context, program_state, min, max, color) {
+    const center = min.plus(max).times(0.5);
+    const size = max.minus(min).times(0.5);
+    let model_transform = Mat4.translation(center[0], center[1], center[2])
+        .times(Mat4.scale(size[0], size[1], size[2]));
+
+    const material = this.materials.hitbox.override({ color: color });
+    this.shapes.cube.draw(context, program_state, model_transform, material);
+  }
+
+  renderBlockHitboxes(context, program_state) {
+    for (let elem of this.map.collisionMap) {
+      if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
+        const elemMin = elem.position.minus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+        const elemMax = elem.position.plus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+        this.drawHitbox(context, program_state, elemMin, elemMax, hex_color("#00FF00")); // Green color for block hitboxes
+      }
+    }
+  }
+
+
   // returns true if bullet was successfully rendered
   // returns false if bullet was not rendered and should be deleted from animation queue
   renderBullet(context, program_state) {
@@ -146,6 +169,8 @@ export class Bullet {
         let dotProduct = this.velocity.dot(normal);
         this.velocity = this.velocity.minus(normal.times(2 * dotProduct));
         this.numCollisions += 1;
+
+        this.lastCollidedBlock = collision.block
       }
     }
 
@@ -172,8 +197,18 @@ export class Bullet {
     if (this.shouldRenderBullet) {
       let model_transform = Mat4.translation(this.position[0], this.position[1], this.position[2])
           .times(Mat4.scale(BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE));
-      this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+      if (!this.hitboxOn) {
+        this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+      } else {
+        // draw bullet hitbox
+        const bulletMin = this.position.to3().minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        const bulletMax = this.position.to3().plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+        this.drawHitbox(context, program_state, bulletMin, bulletMax, hex_color("#FF0000"));
+        this.renderBlockHitboxes(context, program_state);
+      }
+
     }
+
   }
 
   renderSmoke(context,program_state) {
@@ -317,6 +352,13 @@ export class Bullet {
           min_distance = curr_distance;
           min_index = i;
         }
+      }
+
+      const closestBlock = candidate_blocks[min_index];
+
+      // Check if the closest block is the same as the last collided block
+      if (this.lastCollidedBlock === closestBlock.block) {
+        return null; // Ignore collision with the same block
       }
 
       return candidate_blocks[min_index];
