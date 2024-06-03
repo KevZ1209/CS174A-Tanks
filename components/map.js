@@ -134,7 +134,7 @@ class Map {
                     this.user.angle = Math.PI / 2;
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_STATIONARY) {
                     // if current character is an ENEMY_STATIONARY
-                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_STATIONARY);
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_STATIONARY, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING) {
@@ -189,7 +189,7 @@ class Map {
 
         // draw enemies
         for (let enemy of this.enemies) {
-            enemy.render(context, program_state);
+            enemy.render(context, program_state, this.user.getPosition()[0], this.user.getPosition()[1]);
         }
 
         // draw bullets
