@@ -190,7 +190,7 @@ class Map {
 
         // draw enemies
         for (let enemy of this.enemies) {
-            enemy.render(context, program_state);
+            enemy.render(context, program_state, this.user.getPosition()[0], this.user.getPosition()[1]);
         }
 
         // draw bullets

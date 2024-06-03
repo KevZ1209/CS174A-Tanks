@@ -1,7 +1,8 @@
-import { defs, tiny } from '../examples/common.js';
+import {defs, Subdivision_Sphere, tiny} from '../examples/common.js';
 import { Shape_From_File } from '../examples/obj-file-demo.js';
 import { Bomb } from './bomb.js';
 import {Bullet} from "./bullet.js";
+import {Text_Line} from "../examples/text-demo.js";
 
 const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 const { Textured_Phong } = defs;
@@ -100,7 +101,7 @@ class Tank {
     }
   }
 
-  render(context, program_state) {
+  render(context, program_state, user_x=0, user_z=0) {
     if (!this.dead) {
       // tank alive
       let turret_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
@@ -110,35 +111,73 @@ class Tank {
         .times(Mat4.translation(0, 1, -3.5))));
 
       let tankbody_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
-          .times(Mat4.scale(1, 1, 1))
           .times(Mat4.translation(0, 0, 0))
-          .times(Mat4.rotation(this.body_orientation, 0, 1, 0));
+          .times(Mat4.rotation(this.body_orientation, 0, 1, 0))
+          .times(Mat4.scale(1, 1, 1));
 
       this.shapes.turret.draw(context, program_state, turret_transform, this.materials.turret_test);
       this.shapes.tankbody.draw(context, program_state, tankbody_transform, this.materials.tank_test);
-
-
       const t = program_state.animation_time;
       const dt = program_state.animation_delta_time / 1000;
 
-      // reload bullets
-      if (this.clip >= MAX_CLIP_SIZE) {
-        this.last_reload_time = t
-      } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
-        this.clip++;
-        this.last_reload_time = t;
-      }
+      if (this.type === TANK_TYPE_ENUM.USER) {
 
-      if (this.type !== TANK_TYPE_ENUM.USER && (this.map.state === 3 || this.map.state === 9)) {
-        this.updateAIMovement(dt);
-      }
-
-      if (this.targetPosition && !this.reachedTarget) {
-        if (this.targetBodyOrientation !== null && Math.abs(this.body_orientation - this.targetBodyOrientation) > 0.01) {
-          this.rotateTowardsTargetAngle(dt);
-        } else {
-          this.moveTowardsTarget(dt);
+        // reload bullets
+        if (this.clip >= MAX_CLIP_SIZE) {
+          this.last_reload_time = t
+        } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
+          this.clip++;
+          this.last_reload_time = t;
         }
+      }
+
+    if (this.type !== TANK_TYPE_ENUM.USER && (this.map.state === 3 || this.map.state === 9)) {
+        this.updateAIMovement(dt);
+    }
+
+    if (this.targetPosition && !this.reachedTarget) {
+        if (this.targetBodyOrientation !== null && Math.abs(this.body_orientation - this.targetBodyOrientation) > 0.01) {
+            this.rotateTowardsTargetAngle(dt);
+        } else {
+            this.moveTowardsTarget(dt);
+        }
+    }
+
+      if (this.type === TANK_TYPE_ENUM.ENEMY_STATIONARY) {
+        let z = user_z - this.z;
+        let x = user_x - this.x;
+
+        this.angle = Math.atan2(x, z);
+
+        // add bullet to animation queue
+        if (t - this.last_reload_time > RELOAD_TIME) {
+          this.last_reload_time = t;
+          let bullet = new Bullet(
+              this.x,
+              this.z,
+              this.angle,
+              {
+                bullet: new Subdivision_Sphere(4),
+                sphere: new Subdivision_Sphere(1),
+              },
+              {
+                bulletMaterial: new Material(new defs.Phong_Shader(), {
+                  ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+                }),
+                smoke: new Material(new defs.Phong_Shader(), {
+                  ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
+                }),
+                hitbox: new Material(new defs.Phong_Shader(), {
+                  ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+                })
+              },
+              this.map,
+              false
+          )
+          this.map.bullet_queue.push(bullet);
+          bullet.spawnSmokeBurst();
+        }
+
       }
 
     } else {
