@@ -26,7 +26,7 @@ const BLOCK_COLOR = hex_color("#D9AD89");
 const CORK_COLOR = hex_color("#BC8953");
 
 class Map {
-    constructor() {
+    constructor(state) {
         this.collisionMap = [];
         this.enemies = [];
         this.userPosition = Mat4.identity();
@@ -34,6 +34,7 @@ class Map {
         this.level = 0;
         this.bullet_queue = [];
         this.bomb_queue = [];
+        this.state = state;
 
         this.shapes = {
             block: new Cube(),
@@ -134,22 +135,22 @@ class Map {
                     this.user.angle = Math.PI / 2;
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_STATIONARY) {
                     // if current character is an ENEMY_STATIONARY
-                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_STATIONARY);
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_STATIONARY, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING) {
                     // if current character is an ENEMY_MOVING
-                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING);
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_BOMB) {
                     // if current character is an ENEMY_MOVING_BOMB
-                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_BOMB);
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_BOMB, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_FAST_SHOOTING) {
                     // if current character is an ENEMY_MOVING_FAST_SHOOTING
-                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_FAST_SHOOTING);
+                    let enemy = new Tank(x, z, Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_FAST_SHOOTING, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] !== MAP_SCHEMATIC_ENUM.EMPTY) {

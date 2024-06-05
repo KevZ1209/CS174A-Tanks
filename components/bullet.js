@@ -19,7 +19,7 @@ const BULLET_OFFSET = 2;
 const BULLET_SPEED = 10;
 const BULLET_REMOVAL_DELAY = 450;
 // Delay before bullet can hit a tank
-const BULLET_COLLISION_DELAY = 0.175;
+const BULLET_COLLISION_DELAY = 0.05;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
@@ -33,7 +33,6 @@ const SMOKE_BURST_PARTICLE_COUNT = 50;
 const SMOKE_BURST_SIZE = 1.6;
 const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
-
 
 export class Bullet {
   static activeBullets = [];
@@ -175,7 +174,7 @@ export class Bullet {
     }
 
     if (this.timeSinceFired >= BULLET_COLLISION_DELAY) {
-      this.checkTankCollision();
+      this.checkTankCollision(true);
       this.checkBombCollision();
       this.checkBulletCollision()
     }
@@ -251,7 +250,7 @@ export class Bullet {
     }
   }
 
-  checkTankCollision() {
+  checkTankCollision(flag) {
     let position = this.position.to3();
     let tanks = [this.map.user, ...this.map.enemies];
     for (let tank of tanks) {
@@ -266,7 +265,7 @@ export class Bullet {
       const yOverlap = bulletMin[1] <= tankMax[1] && bulletMax[1] >= tankMin[1];
       const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
 
-      if (xOverlap && yOverlap && zOverlap && !tank.dead) {
+      if (xOverlap && yOverlap && zOverlap && !tank.dead && flag) {
         tank.dead = true;
         this.shouldRenderBullet = false;
         this.spawnSmokeBurst();

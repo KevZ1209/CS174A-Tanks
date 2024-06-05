@@ -15,7 +15,7 @@ const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = schematics.length;
-const TANK_SPEED = 0.15;
+const TANK_SPEED = 0.035;
 const INITIAL_LIVES = 3;
 
 const TITLE_STATE = 0;
@@ -69,7 +69,7 @@ export class GameScene extends Scene {
             .times(Mat4.scale(-40, 20, 20));
 
         // map
-        this.map = new Map();
+        this.map = new Map(this.state);
         this.level = 0;
 
         // player movement
@@ -361,6 +361,7 @@ export class GameScene extends Scene {
             if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
                 console.log(`info for level ${this.level} --> starting level ${this.level}`)
                 this.state = LEVEL_START_STATE;
+                this.map.state = LEVEL_START_STATE;
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_START_STATE) {
@@ -371,6 +372,7 @@ export class GameScene extends Scene {
             if (t - this.stateStart >= LEVEL_START_STATE_DURATION) {
                 console.log(`starting level ${this.level} --> level ${this.level}`)
                 this.state = LEVEL_STATE;
+                this.map.state = LEVEL_STATE;
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_STATE) {
