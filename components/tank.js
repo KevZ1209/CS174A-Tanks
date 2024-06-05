@@ -3,6 +3,8 @@ import { Shape_From_File } from '../examples/obj-file-demo.js';
 import { Bomb } from './bomb.js';
 import {Bullet} from "./bullet.js";
 import {Text_Line} from "../examples/text-demo.js";
+import {MAP_SCHEMATIC_ENUM} from "./map.js";
+import { BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH, BULLET_SCALE } from './bullet.js';
 
 const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 const { Textured_Phong } = defs;
@@ -13,6 +15,7 @@ const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.5;
 const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 2500;
+const STATIONARY_RELOAD_TIME = 1000;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -118,33 +121,71 @@ class Tank {
 
         this.angle = Math.atan2(x, z);
 
+        // console.log(t - this.last_reload_time)
+
         // add bullet to animation queue
-        if (t - this.last_reload_time > RELOAD_TIME) {
-          this.last_reload_time = t;
-          let bullet = new Bullet(
-              this.x,
-              this.z,
-              this.angle,
-              {
-                bullet: new Subdivision_Sphere(4),
-                sphere: new Subdivision_Sphere(1),
-              },
-              {
-                bulletMaterial: new Material(new defs.Phong_Shader(), {
-                  ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-                }),
-                smoke: new Material(new defs.Phong_Shader(), {
-                  ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
-                }),
-                hitbox: new Material(new defs.Phong_Shader(), {
-                  ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-                })
-              },
-              this.map,
-              false
-          )
-          this.map.bullet_queue.push(bullet);
-          bullet.spawnSmokeBurst();
+        if (t - this.last_reload_time > STATIONARY_RELOAD_TIME) {
+
+          // check for walls
+          const GAP = 1;
+          let check_x = this.x;
+          let check_z = this.z;
+          let wall_in_front = false;
+
+          let distance_from_player = Math.sqrt(Math.pow(this.x - user_x, 2) + Math.pow(this.z - user_z, 2))
+
+          for (let i = 0; i < distance_from_player; i++) {
+            check_x += Math.sin(this.angle) * GAP;
+            check_z += Math.cos(this.angle) * GAP;
+            let position = vec3(check_x, 0, check_z);
+            for (let elem of this.map.collisionMap) {
+              if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
+                const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+                const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+                const elemMin = elem.position.minus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+                const elemMax = elem.position.plus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+
+                const xOverlap = bulletMin[0] <= elemMax[0] && bulletMax[0] >= elemMin[0];
+                const yOverlap = bulletMin[1] <= elemMax[1] && bulletMax[1] >= elemMin[1];
+                const zOverlap = bulletMin[2] <= elemMax[2] && bulletMax[2] >= elemMin[2];
+                if (xOverlap && yOverlap && zOverlap) {
+                  wall_in_front = true;
+                }
+              }
+            }
+          }
+          if (wall_in_front === false) {
+            let bullet = new Bullet(
+                this.x,
+                this.z,
+                this.angle,
+                {
+                  bullet: new Subdivision_Sphere(4),
+                  sphere: new Subdivision_Sphere(1),
+                },
+                {
+                  bulletMaterial: new Material(new defs.Phong_Shader(), {
+                    ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+                  }),
+                  smoke: new Material(new defs.Phong_Shader(), {
+                    ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
+                  }),
+                  hitbox: new Material(new defs.Phong_Shader(), {
+                    ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
+                  })
+                },
+                this.map,
+                false
+            )
+            this.map.bullet_queue.push(bullet);
+            // bullet.spawnSmokeBurst();
+            this.last_reload_time = t;
+          }
+          else {
+
+          }
+
         }
 
       }
@@ -234,7 +275,7 @@ class Tank {
   checkTankCollision(potential_x, potential_z) {
     let position = vec3(potential_x, 0, potential_z);
     let tanks = [...this.map.enemies];
-    console.log(tanks);
+    // console.log(tanks);
     for (let tank of tanks) {
       if (!tank.dead) {
         const tankMin = position.minus(vec3(TANK_WIDTH * 3, 0, TANK_DEPTH* 2.2));
@@ -246,8 +287,8 @@ class Tank {
         const xOverlap = tankMin[0] <= otherTankMax[0] && tankMax[0] >= otherTankMin[0];
         const yOverlap = tankMin[1] <= otherTankMax[1] && tankMax[1] >= otherTankMin[1];
         const zOverlap = tankMin[2] <= otherTankMax[2] && tankMax[2] >= otherTankMin[2];
-        console.log("tankMin X: ", tankMin[0], "--- otherTankMax X: ", otherTankMax[0]);
-        console.log("tankMin Z: ", tankMin[2], "--- otherTankMax Z: ", otherTankMax[2]);
+        // console.log("tankMin X: ", tankMin[0], "--- otherTankMax X: ", otherTankMax[0]);
+        // console.log("tankMin Z: ", tankMin[2], "--- otherTankMax Z: ", otherTankMax[2]);
         if (xOverlap && yOverlap && zOverlap) {
           return true; // Collision detected with another tank
         }
