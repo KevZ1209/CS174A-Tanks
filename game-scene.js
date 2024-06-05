@@ -364,7 +364,8 @@ export class GameScene extends Scene {
                 this.stateStart = t;
             }
         } else if (this.state === LEVEL_START_STATE) {
-            this.map.render(context, program_state);
+            this.map.render(context, program_state, false);
+            this.map.clearBulletQueue();
             this.user.render(context, program_state);
             this.renderUserInfo(context, program_state);
 
@@ -390,7 +391,7 @@ export class GameScene extends Scene {
             } else {
                 if (!this.user.dead) {
                     this.moveUser()
-                    this.map.render(context, program_state);
+                    this.map.render(context, program_state, true);
                     this.user.render(context, program_state);
                     this.renderUserInfo(context, program_state);
 
@@ -450,7 +451,7 @@ export class GameScene extends Scene {
                 this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
             }
 
-            this.map.render(context, program_state);
+            this.map.render(context, program_state, false);
             this.user.render(context, program_state);
             this.renderUserInfo(context, program_state);
 

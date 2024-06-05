@@ -46,6 +46,7 @@ export class Bullet {
     this.map = map;
     this.lastCollidedBlock = null;
     this.hitboxOn = hitboxOn;
+    this.hits_enemies = hits_enemies;
 
     this.timeSinceStoppedRendering = 0;
     this.shouldRenderBullet = true;
@@ -268,21 +269,27 @@ export class Bullet {
       const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
 
       if (xOverlap && yOverlap && zOverlap && !tank.dead) {
-        // if it's not the user...
-        if (i !== 0) {
-
+        // if it's the user...
+        if (i === 0) {
+          tank.dead = true;
+          this.shouldRenderBullet = false;
+          this.spawnSmokeBurst();
+          if (tank.type === TANK_TYPE_ENUM.USER) {
+            console.log("User died :((");
+          } else {
+            console.log("Enemy died");
+          }
         }
-        else {
-
-        }
-
-        tank.dead = true;
-        this.shouldRenderBullet = false;
-        this.spawnSmokeBurst();
-        if (tank.type === TANK_TYPE_ENUM.USER) {
-          console.log("User died :((");
-        } else {
-          console.log("Enemy died");
+        // if it's NOT the user...
+        if (i !== 0 && this.hits_enemies === true) {
+          tank.dead = true;
+          this.shouldRenderBullet = false;
+          this.spawnSmokeBurst();
+          if (tank.type === TANK_TYPE_ENUM.USER) {
+            console.log("User died :((");
+          } else {
+            console.log("Enemy died");
+          }
         }
       }
     }

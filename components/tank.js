@@ -14,7 +14,7 @@ const TANK_WIDTH = 0.5;
 const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.5;
 const MAX_CLIP_SIZE = 4;
-const RELOAD_TIME = 2500;
+const RELOAD_TIME = 1500;
 const STATIONARY_RELOAD_TIME = 1000;
 
 const TANK_TYPE_ENUM = {
@@ -52,6 +52,9 @@ class Tank {
     this.last_reload_time = 0;
     this.dead = false;
     this.body_orientation = Math.PI/2;
+    this.pause = true; // pause all shooting & moving before clock starts
+    this.user_x = 0;
+    this.user_z = 0;
 
     this.materials = {
       tank: new Material(new defs.Phong_Shader(),
@@ -76,17 +79,29 @@ class Tank {
       enemy_x: new Material(new defs.Textured_Phong(1), {
         ambient: 1, diffusivity: 0, specularity: 0,
         texture: new Texture("assets/enemy_x.png")
+      }),
+      hitbox: new Material(new defs.Phong_Shader(),
+          { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
+      bulletMaterial: new Material(new defs.Phong_Shader(), {
+        ambient: .4, diffusivity: .6, color: hex_color("#ff7f7f")
+      }),
+      smoke: new Material(new defs.Phong_Shader(), {
+        ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
       })
     }
     this.shapes = {
       tank: new Shape_From_File("assets/tank.obj"),
       turret: new Shape_From_File("assets/turret.obj"),
       tankbody: new Shape_From_File("assets/tankbody.obj"),
-      x: new defs.Square()
+      x: new defs.Square(),
+      bullet: new Subdivision_Sphere(4),
+      sphere: new Subdivision_Sphere(1),
     }
   }
 
-  render(context, program_state, user_x=0, user_z=0) {
+  render(context, program_state, user_x=0, user_z=0, start=true) {
+    this.user_x = user_x;
+    this.user_z = user_z;
     if (!this.dead) {
       // tank alive
       let turret_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
@@ -116,74 +131,15 @@ class Tank {
         }
       }
       if (this.type === TANK_TYPE_ENUM.ENEMY_STATIONARY) {
-        let z = user_z - this.z;
-        let x = user_x - this.x;
+        if (start) {
 
-        this.angle = Math.atan2(x, z);
+          this.pointTowardsUser();
 
-        // console.log(t - this.last_reload_time)
-
-        // add bullet to animation queue
-        if (t - this.last_reload_time > STATIONARY_RELOAD_TIME) {
-
-          // check for walls
-          const GAP = 1;
-          let check_x = this.x;
-          let check_z = this.z;
-          let wall_in_front = false;
-
-          let distance_from_player = Math.sqrt(Math.pow(this.x - user_x, 2) + Math.pow(this.z - user_z, 2))
-
-          for (let i = 0; i < distance_from_player; i++) {
-            check_x += Math.sin(this.angle) * GAP;
-            check_z += Math.cos(this.angle) * GAP;
-            let position = vec3(check_x, 0, check_z);
-            for (let elem of this.map.collisionMap) {
-              if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
-                const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
-                const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
-
-                const elemMin = elem.position.minus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
-                const elemMax = elem.position.plus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
-
-                const xOverlap = bulletMin[0] <= elemMax[0] && bulletMax[0] >= elemMin[0];
-                const yOverlap = bulletMin[1] <= elemMax[1] && bulletMax[1] >= elemMin[1];
-                const zOverlap = bulletMin[2] <= elemMax[2] && bulletMax[2] >= elemMin[2];
-                if (xOverlap && yOverlap && zOverlap) {
-                  wall_in_front = true;
-                }
-              }
+          if (t - this.last_reload_time > STATIONARY_RELOAD_TIME) {
+            if (!this.wallsInFront()) {
+              this.shootBullet();
+              this.last_reload_time = t;
             }
-          }
-          if (wall_in_front === false) {
-            let bullet = new Bullet(
-                this.x,
-                this.z,
-                this.angle,
-                {
-                  bullet: new Subdivision_Sphere(4),
-                  sphere: new Subdivision_Sphere(1),
-                },
-                {
-                  bulletMaterial: new Material(new defs.Phong_Shader(), {
-                    ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-                  }),
-                  smoke: new Material(new defs.Phong_Shader(), {
-                    ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
-                  }),
-                  hitbox: new Material(new defs.Phong_Shader(), {
-                    ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-                  })
-                },
-                this.map,
-                false
-            )
-            this.map.bullet_queue.push(bullet);
-            // bullet.spawnSmokeBurst();
-            this.last_reload_time = t;
-          }
-          else {
-
           }
 
         }
@@ -197,6 +153,65 @@ class Tank {
         .times(Mat4.scale(1.3, 1.3, 1.3))
       this.shapes.x.draw(context, program_state, model_transform, this.type === TANK_TYPE_ENUM.USER ? this.materials.user_x : this.materials.enemy_x);
     }
+  }
+
+  pointTowardsUser() {
+    let dz = this.user_z - this.z;
+    let dx = this.user_x - this.x;
+
+    // set tank angle towards user
+    this.angle = Math.atan2(dx, dz);
+  }
+
+  // shoots a red bullet towards the current tank angle
+  shootBullet() {
+
+    let bullet = new Bullet(
+        this.x,
+        this.z,
+        this.angle,
+        this.shapes,
+        this.materials,
+        this.map,
+        false,
+        false
+    )
+    this.map.bullet_queue.push(bullet);
+    bullet.spawnSmokeBurst();
+
+  }
+
+  wallsInFront() {
+    // check for walls
+    const GAP = 1;
+    let check_x = this.x;
+    let check_z = this.z;
+    let wall_in_front = false;
+
+    let distance_from_player = Math.sqrt(Math.pow(this.x - this.user_x, 2) + Math.pow(this.z - this.user_z, 2))
+
+    for (let i = 0; i < distance_from_player; i++) {
+      check_x += Math.sin(this.angle) * GAP;
+      check_z += Math.cos(this.angle) * GAP;
+      let position = vec3(check_x, 0, check_z);
+      for (let elem of this.map.collisionMap) {
+        if (elem.type !== MAP_SCHEMATIC_ENUM.HOLE) {
+          const bulletMin = position.minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+          const bulletMax = position.plus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
+
+          const elemMin = elem.position.minus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+          const elemMax = elem.position.plus(vec3(elem.size * BULLET_SCALE, elem.size * BULLET_SCALE, elem.size * BULLET_SCALE));
+
+          const xOverlap = bulletMin[0] <= elemMax[0] && bulletMax[0] >= elemMin[0];
+          const yOverlap = bulletMin[1] <= elemMax[1] && bulletMax[1] >= elemMin[1];
+          const zOverlap = bulletMin[2] <= elemMax[2] && bulletMax[2] >= elemMin[2];
+          if (xOverlap && yOverlap && zOverlap) {
+            wall_in_front = true;
+          }
+        }
+      }
+    }
+    return wall_in_front;
   }
 
   updatePosition(new_x, new_z, direction = null) {

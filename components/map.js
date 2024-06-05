@@ -168,7 +168,12 @@ class Map {
         return this.materials.block[index];
     }
 
-    render(context, program_state) {
+    clearBulletQueue() {
+        // clear bullet queue (for in between levels)(
+        this.bullet_queue.splice(0, this.bullet_queue.length)
+    }
+
+    render(context, program_state, start_shooting=true) {
         const dt = program_state.animation_delta_time / 1000;
         // draw background
         let background_transform = Mat4.identity().times(Mat4.translation(16, -1, 15))
@@ -189,7 +194,7 @@ class Map {
 
         // draw enemies
         for (let enemy of this.enemies) {
-            enemy.render(context, program_state, this.user.getPosition()[0], this.user.getPosition()[1]);
+            enemy.render(context, program_state, this.user.getPosition()[0], this.user.getPosition()[1], start_shooting);
         }
 
         // draw bullets
