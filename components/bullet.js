@@ -36,7 +36,7 @@ const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 export class Bullet {
   static activeBullets = [];
-  constructor(x, z, angle, shapes, materials, map, hitboxOn) {
+  constructor(x, z, angle, shapes, materials, map, hitboxOn, hits_enemies = true) {
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), -0.5, z + BULLET_OFFSET * Math.cos(angle), 1);
     this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
     this.numCollisions = 0;
@@ -253,7 +253,8 @@ export class Bullet {
   checkTankCollision(flag) {
     let position = this.position.to3();
     let tanks = [this.map.user, ...this.map.enemies];
-    for (let tank of tanks) {
+    for (let i = 0; i < tanks.length; i++) {
+      let tank = tanks[i];
       let tankPosition = vec3(tank.x, 0, tank.z);
       const tankMin = tankPosition.minus(vec3(TANK_WIDTH*1.9, TANK_HEIGHT*1.9, TANK_DEPTH*1.9 ));
       const tankMax = tankPosition.plus(vec3(TANK_WIDTH*1.9, TANK_HEIGHT *1.9, TANK_DEPTH*1.9));
@@ -265,7 +266,15 @@ export class Bullet {
       const yOverlap = bulletMin[1] <= tankMax[1] && bulletMax[1] >= tankMin[1];
       const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
 
-      if (xOverlap && yOverlap && zOverlap && !tank.dead && flag) {
+      if (xOverlap && yOverlap && zOverlap && !tank.dead) {
+        // if it's not the user...
+        if (i !== 0) {
+
+        }
+        else {
+
+        }
+
         tank.dead = true;
         this.shouldRenderBullet = false;
         this.spawnSmokeBurst();
@@ -365,3 +374,5 @@ export class Bullet {
     }
   }
 }
+
+export { BULLET_HEIGHT, BULLET_WIDTH, BULLET_DEPTH, BULLET_SCALE }
