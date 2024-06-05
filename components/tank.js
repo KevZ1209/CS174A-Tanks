@@ -42,6 +42,9 @@ class Tank {
     this.x = initial_x;
     this.z = initial_z;
     this.angle = initial_angle
+    this.map = map;
+    this.type = type;
+    this.bombActive = false;
     this.clip = MAX_CLIP_SIZE;
     this.last_reload_time = 0;
     this.dead = false;

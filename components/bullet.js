@@ -34,7 +34,6 @@ const SMOKE_BURST_SIZE = 1.6;
 const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
-
 export class Bullet {
   static activeBullets = [];
   constructor(x, z, angle, shapes, materials, map, hitboxOn) {
