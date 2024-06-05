@@ -1,18 +1,22 @@
 import { defs, tiny } from '../examples/common.js';
 import { Shape_From_File } from '../examples/obj-file-demo.js';
 import { Bomb } from './bomb.js';
+import {Bullet} from "./bullet.js";
 
 const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 const { Textured_Phong } = defs;
 
-const TANK_SCALE = 0.9;
+const TANK_SCALE = 0.75;
 const TANK_WIDTH = 0.5;
 const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.5;
 const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 2500;
-const MOVEMENT_SPEED = 2;
-const ROTATION_SPEED = 1;
+const MOVEMENT_SPEED = 4;
+const ROTATION_SPEED = 2;
+const DODGE_DISTANCE = 1.8;
+const BULLET_CHECK_INTERVAL = 2;
+const LEVEL_START_STATE = 2;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -59,6 +63,9 @@ class Tank {
     this.targetBodyOrientation = null;
     this.reachedTarget = true;
     this.movementTimer = 0;
+    this.chasePlayer = false;
+    this.bulletDodgeTimer = 0;
+    this.isDodging = false;
 
     this.materials = {
       tank: new Material(new defs.Phong_Shader(),
@@ -122,7 +129,7 @@ class Tank {
         this.last_reload_time = t;
       }
 
-      if (this.type !== TANK_TYPE_ENUM.USER) {
+      if (this.type !== TANK_TYPE_ENUM.USER && (this.map.state === 3 || this.map.state === 9)) {
         this.updateAIMovement(dt);
       }
 
@@ -148,6 +155,12 @@ class Tank {
       case TANK_TYPE_ENUM.ENEMY_MOVING:
         this.updateMovingEnemy(dt);
         break;
+      case TANK_TYPE_ENUM.ENEMY_MOVING_BOMB:
+        this.updateMovingBombEnemy(dt);
+        break;
+      case TANK_TYPE_ENUM.ENEMY_MOVING_FAST_SHOOTING:
+        this.detectAndDodgeBullets(dt);
+        break;
         // other cases for different tank types
       default:
         break;
@@ -156,12 +169,30 @@ class Tank {
 
   updateMovingEnemy(dt) {
     this.movementTimer += dt;
-    if (this.movementTimer >= 1) { // Move every second
+    let timer = 1;
+    if (this.type === TANK_TYPE_ENUM.ENEMY_MOVING_BOMB) {
+      timer = 0.5;
+    }
+    if (this.movementTimer >= timer) { // Move every second
       this.movementTimer = 0;
       this.moveRandomly();
     }
   }
 
+  updateMovingBombEnemy(dt) {
+    const playerPosition = this.map.user.getPosition();
+    const distanceToPlayer = vec3(this.x, 0, this.z).minus(vec3(playerPosition[0], 0, playerPosition[1])).norm();
+
+    if (distanceToPlayer < 14) { // Chase player if within 10 units
+      this.setTargetPosition(playerPosition[0], playerPosition[1]);
+      this.targetBodyOrientation = Math.atan2(playerPosition[0] - this.x, playerPosition[1] - this.z);
+      this.chasePlayer = true;
+    } else {
+      // Random movement if player is not nearby
+      this.updateMovingEnemy(dt);
+      this.chasePlayer = false;
+    }
+  }
 
   moveRandomly() {
     const directions = [
@@ -175,18 +206,14 @@ class Tank {
       vec3(-2,0,-2),
     ];
 
-    while (directions.length > 0) {
-      const randomIndex = Math.floor(Math.random() * directions.length);
-      const direction = directions.splice(randomIndex, 1)[0];
-      const newX = this.x + direction[0] * TANK_WIDTH * 2;
-      const newZ = this.z + direction[2] * TANK_DEPTH * 2;
+    const randomIndex = Math.floor(Math.random() * directions.length);
+    const direction = directions.splice(randomIndex, 1)[0];
+    const newX = this.x + direction[0] * TANK_WIDTH * 3;
+    const newZ = this.z + direction[2] * TANK_DEPTH * 3;
 
-      if (!this.checkCollision(newX, newZ)) {
-        this.setTargetPosition(newX, newZ);
-        this.targetBodyOrientation = Math.atan2(direction[0], direction[2]);
-        break;
-      }
-    }
+    this.setTargetPosition(newX, newZ);
+    this.targetBodyOrientation = Math.atan2(direction[0], direction[2]);
+
   }
 
   setTargetPosition(new_x, new_z) {
@@ -197,15 +224,83 @@ class Tank {
   moveTowardsTarget(dt) {
     const direction = this.targetPosition.minus(vec3(this.x, 0, this.z)).normalized();
     const distance = this.targetPosition.minus(vec3(this.x, 0, this.z)).norm();
+    let slowFactor = 2000;
+    if (this.chasePlayer) {
+      slowFactor = 1000;
+    } else if (this.isDodging){
+      slowFactor = 800;
+    }
+
 
     if (distance <= this.movementSpeed * dt) {
       this.x = this.targetPosition[0];
       this.z = this.targetPosition[2];
       this.reachedTarget = true;
     } else {
-      this.x += direction[0] * this.movementSpeed * dt;
-      this.z += direction[2] * this.movementSpeed * dt;
+      for(let i = 0; i <50; i++) {
+        let newX = this.x + direction[0]/slowFactor;
+        let newZ = this.z + direction[2]/slowFactor;
+        if (!this.checkCollision(newX,newZ)) {
+          this.x = newX;
+          this.z =newZ;
+        } else {
+          break;
+        }
+      }
     }
+  }
+
+  dodgeBullet(bullet) {
+    const bulletPosition = bullet.position.to3();
+    const deltaX = bulletPosition[0] - this.x;
+    const deltaZ = bulletPosition[2] - this.z;
+
+    let dodgeDirection;
+
+    if (Math.abs(deltaX) > Math.abs(deltaZ)) {
+      // Dodge vertically (up or down) if bullet is more horizontal
+      dodgeDirection = deltaZ > 0 ? vec3(0, 0, -2) : vec3(0, 0, 2); // Up or down
+    } else {
+      // Dodge horizontally (left or right) if bullet is more vertical
+      dodgeDirection = deltaX > 0 ? vec3(-2, 0, 0) : vec3(2, 0, 0); // Left or right
+    }
+
+    const newX = this.x + dodgeDirection[0] * 1.5;
+    const newZ = this.z + dodgeDirection[2] * 1.5;
+
+    this.setTargetPosition(newX, newZ);
+    this.targetBodyOrientation = Math.atan2(dodgeDirection[0], dodgeDirection[2]);
+  }
+
+  detectAndDodgeBullets(dt) {
+    this.bulletDodgeTimer += dt;
+
+    if (this.bulletDodgeTimer >= BULLET_CHECK_INTERVAL) {
+
+      for (let bullet of Bullet.activeBullets) {
+        let futurePosition = bullet.position.to3();
+        const stepCount = 50; // Number of steps to predict bullet's future position
+        const stepSize = BULLET_CHECK_INTERVAL / (stepCount*2);
+
+        for (let i = 0; i < stepCount; i++) {
+          futurePosition = futurePosition.plus(bullet.velocity.times(stepSize));
+          if (this.willBulletHitTank(futurePosition)) {
+
+            this.isDodging = true;
+            this.bulletDodgeTimer = 0;
+            this.dodgeBullet(bullet);
+            return;
+          }
+        }
+      }
+    }
+
+  }
+
+  willBulletHitTank(futurePosition) {
+    const tankPosition = vec3(this.x, 0, this.z);
+    const distance = futurePosition.minus(tankPosition).norm();
+    return distance < DODGE_DISTANCE;
   }
 
   rotateTowardsTargetAngle(dt) {
@@ -294,9 +389,9 @@ class Tank {
 
   checkTankCollision(potential_x, potential_z) {
     let position = vec3(potential_x, 0, potential_z);
-    let tanks = [...this.map.enemies];
+    let tanks = [this.map.user,...this.map.enemies];
     for (let tank of tanks) {
-      if (!tank.dead) {
+      if (!tank.dead && tank != this) {
         const tankMin = position.minus(vec3(TANK_WIDTH * 3, 0, TANK_DEPTH* 2.2));
         const tankMax = position.plus(vec3(TANK_WIDTH* 3, TANK_HEIGHT, TANK_DEPTH* 2.2));
 

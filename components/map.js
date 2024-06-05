@@ -26,7 +26,7 @@ const BLOCK_COLOR = hex_color("#D9AD89");
 const CORK_COLOR = hex_color("#BC8953");
 
 class Map {
-    constructor() {
+    constructor(state) {
         this.collisionMap = [];
         this.enemies = [];
         this.userPosition = Mat4.identity();
@@ -34,6 +34,7 @@ class Map {
         this.level = 0;
         this.bullet_queue = [];
         this.bomb_queue = [];
+        this.state = state;
 
         this.shapes = {
             block: new Cube(),
