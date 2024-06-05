@@ -15,7 +15,7 @@ const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = schematics.length;
-const TANK_SPEED = 0.035;
+const TANK_SPEED = 0.15;
 const INITIAL_LIVES = 3;
 
 const TITLE_STATE = 0;
@@ -422,6 +422,7 @@ export class GameScene extends Scene {
                 }
             }
         } else if (this.state === LEVEL_CLEARED_STATE) {
+            this.map.clearBulletQueue();
             if (t - this.stateStart >= 1000) {
                 let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
                 this.shapes.text.set_string(`Level Cleared!`, context.context);

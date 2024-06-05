@@ -15,7 +15,7 @@ const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.65;
 const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 1500;
-const STATIONARY_RELOAD_TIME = 1000;
+const STATIONARY_RELOAD_TIME = 5000;
 const MOVEMENT_SPEED = 4;
 const ROTATION_SPEED = 2;
 const DODGE_DISTANCE = 1.8;
@@ -161,7 +161,7 @@ class Tank {
         }
     }
 
-      if (this.type === TANK_TYPE_ENUM.ENEMY_STATIONARY) {
+      if (this.type !== TANK_TYPE_ENUM.USER) {
         if (start) {
 
           this.pointTowardsUser();
