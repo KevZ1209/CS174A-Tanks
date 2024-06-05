@@ -1,6 +1,7 @@
-import { Cube, defs, tiny } from "../examples/common.js";
+import {Cube, defs, Subdivision_Sphere, tiny} from "../examples/common.js";
 import { schematics } from "./map_schematics.js";
 import { Tank, TANK_TYPE_ENUM } from "./tank.js";
+import {Shape_From_File} from "../examples/obj-file-demo.js";
 
 const { vec4, hex_color, Mat4, Material, Texture } = tiny;
 
@@ -39,6 +40,12 @@ class Map {
         this.shapes = {
             block: new Cube(),
             square: new defs.Square(),
+            tank: new Shape_From_File("assets/tank.obj"),
+            turret: new Shape_From_File("assets/turret.obj"),
+            tankbody: new Shape_From_File("assets/tankbody.obj"),
+            x: new defs.Square(),
+            bullet: new Subdivision_Sphere(4),
+            sphere: new Subdivision_Sphere(1),
         };
 
         this.materials = {
@@ -56,7 +63,38 @@ class Map {
             hole: new Material(new Textured_Phong(1), {
                 ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/hole.png")
-            })
+            }),
+            tank: new Material(new defs.Phong_Shader(),
+                { ambient: 0.3, diffusivity: 1, specularity: 0, color: hex_color("#D9AD89") }),
+            turret: new Material(new defs.Phong_Shader(),
+                { ambient: 0.3, diffusivity: 1, specularity: 0, color: hex_color("#D9AD89") }),
+            turret_test: new Material(new Textured_Phong(), {
+                ambient: .35, diffusivity: .8, specularity: 0.1,
+                color: hex_color("#D9AD89"),
+                texture: new Texture("assets/cork.jpg")
+            }),
+            tank_test: new Material(new Textured_Phong(), {
+                ambient: .4, diffusivity: .8, specularity: 0.1,
+                color: hex_color("#D9AD89"),
+                texture: new Texture("assets/map_background.jpg")
+            }),
+            user_x: new Material(new defs.Textured_Phong(), {
+                ambient: .3, diffusivity: .3, specularity: 0.0,
+                color: hex_color("#D9AD89"),
+                texture: new Texture("assets/user_x.png")
+            }),
+            enemy_x: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/enemy_x.png")
+            }),
+            hitbox: new Material(new defs.Phong_Shader(),
+                { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
+            bulletMaterial: new Material(new defs.Phong_Shader(), {
+                ambient: .4, diffusivity: .6, color: hex_color("#ff7f7f")
+            }),
+            smoke: new Material(new defs.Phong_Shader(), {
+                ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
+            }),
         }
         this.files = [
             "assets/block1.jpg",

@@ -62,6 +62,7 @@ class Tank {
     this.pause = true; // pause all shooting & moving before clock starts
     this.user_x = 0;
     this.user_z = 0;
+    this.color = this.type.color;
 
     // AI movement
     this.movementSpeed = MOVEMENT_SPEED;
@@ -74,47 +75,8 @@ class Tank {
     this.bulletDodgeTimer = 0;
     this.isDodging = false;
 
-    this.materials = {
-      tank: new Material(new defs.Phong_Shader(),
-        { ambient: 0.3, diffusivity: 1, specularity: 0, color: this.type.color }),
-      turret: new Material(new defs.Phong_Shader(),
-          { ambient: 0.3, diffusivity: 1, specularity: 0, color: this.type.color }),
-      turret_test: new Material(new Textured_Phong(), {
-        ambient: .35, diffusivity: .8, specularity: 0.1,
-        color: this.type.color,
-        texture: new Texture("assets/cork.jpg")
-      }),
-      tank_test: new Material(new Textured_Phong(), {
-        ambient: .4, diffusivity: .8, specularity: 0.1,
-        color: this.type.color,
-        texture: new Texture("assets/map_background.jpg")
-      }),
-      user_x: new Material(new defs.Textured_Phong(), {
-        ambient: .3, diffusivity: .3, specularity: 0.0,
-        color: this.type.color,
-        texture: new Texture("assets/user_x.png")
-      }),
-      enemy_x: new Material(new defs.Textured_Phong(1), {
-        ambient: 1, diffusivity: 0, specularity: 0,
-        texture: new Texture("assets/enemy_x.png")
-      }),
-      hitbox: new Material(new defs.Phong_Shader(),
-          { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
-      bulletMaterial: new Material(new defs.Phong_Shader(), {
-        ambient: .4, diffusivity: .6, color: hex_color("#ff7f7f")
-      }),
-      smoke: new Material(new defs.Phong_Shader(), {
-        ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
-      })
-    }
-    this.shapes = {
-      tank: new Shape_From_File("assets/tank.obj"),
-      turret: new Shape_From_File("assets/turret.obj"),
-      tankbody: new Shape_From_File("assets/tankbody.obj"),
-      x: new defs.Square(),
-      bullet: new Subdivision_Sphere(4),
-      sphere: new Subdivision_Sphere(1),
-    }
+    this.materials = this.map.materials;
+    this.shapes = this.map.shapes;
   }
 
   render(context, program_state, user_x=0, user_z=0, start=true) {
@@ -133,8 +95,8 @@ class Tank {
           .times(Mat4.rotation(this.body_orientation, 0, 1, 0))
           .times(Mat4.scale(1, 1, 1));
 
-      this.shapes.turret.draw(context, program_state, turret_transform, this.materials.turret_test);
-      this.shapes.tankbody.draw(context, program_state, tankbody_transform, this.materials.tank_test);
+      this.shapes.turret.draw(context, program_state, turret_transform, this.materials.turret_test.override({color: this.color}));
+      this.shapes.tankbody.draw(context, program_state, tankbody_transform, this.materials.tank_test.override({color: this.color}));
       const t = program_state.animation_time;
       const dt = program_state.animation_delta_time / 1000;
 
@@ -182,7 +144,7 @@ class Tank {
       let model_transform = Mat4.translation(this.x, -0.9, this.z)
         .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
         .times(Mat4.scale(1.3, 1.3, 1.3))
-      this.shapes.x.draw(context, program_state, model_transform, this.type === TANK_TYPE_ENUM.USER ? this.materials.user_x : this.materials.enemy_x);
+      this.shapes.x.draw(context, program_state, model_transform, this.type === TANK_TYPE_ENUM.USER ? this.materials.user_x.override({color: this.color}) : this.materials.enemy_x.override({color: this.color}));
     }
   }
 
