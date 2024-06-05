@@ -194,7 +194,6 @@ class Tank {
   checkTankCollision(potential_x, potential_z) {
     let position = vec3(potential_x, 0, potential_z);
     let tanks = [...this.map.enemies];
-    console.log(tanks);
     for (let tank of tanks) {
       if (!tank.dead) {
         const tankMin = position.minus(vec3(TANK_WIDTH * 3, 0, TANK_DEPTH* 2.2));
@@ -206,8 +205,6 @@ class Tank {
         const xOverlap = tankMin[0] <= otherTankMax[0] && tankMax[0] >= otherTankMin[0];
         const yOverlap = tankMin[1] <= otherTankMax[1] && tankMax[1] >= otherTankMin[1];
         const zOverlap = tankMin[2] <= otherTankMax[2] && tankMax[2] >= otherTankMin[2];
-        console.log("tankMin X: ", tankMin[0], "--- otherTankMax X: ", otherTankMax[0]);
-        console.log("tankMin Z: ", tankMin[2], "--- otherTankMax Z: ", otherTankMax[2]);
         if (xOverlap && yOverlap && zOverlap) {
           return true; // Collision detected with another tank
         }
