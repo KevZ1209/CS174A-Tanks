@@ -16,7 +16,6 @@ const MAX_BULLET_COLLISIONS = 2;
 const MAX_MAP_DISTANCE = 50;
 const INVINCIBILITY_FRAMES = 0;
 const BULLET_OFFSET = 2;
-const BULLET_SPEED = 10;
 const BULLET_REMOVAL_DELAY = 450;
 // Delay before bullet can hit a tank
 const BULLET_COLLISION_DELAY = 0.05;
@@ -34,14 +33,31 @@ const SMOKE_BURST_SIZE = 1.6;
 const SMOKE_TRAIL_DENSITY = 0.5;
 const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
-export class Bullet {
+const BULLET_TYPE_ENUM = {
+  USER: {
+    speed: 7,
+    color: hex_color("#ffffff")
+  },
+  NORMAL: {
+    speed: 7,
+    color: hex_color("#7A705F")
+  },
+  FAST: {
+    speed: 10,
+    color: hex_color("#ff7f7f")
+  }
+}
+
+class Bullet {
   static activeBullets = [];
-  constructor(x, z, angle, shapes, materials, map, hitboxOn, hits_enemies = true) {
+  constructor(x, z, angle, map, type, hitboxOn, hits_enemies) {
+    this.type = type;
     this.position = vec4(x + BULLET_OFFSET * Math.sin(angle), -0.5, z + BULLET_OFFSET * Math.cos(angle), 1);
-    this.velocity = vec3(Math.sin(angle) * BULLET_SPEED, 0, Math.cos(angle) * BULLET_SPEED);
+    this.velocity = vec3(Math.sin(angle) * this.type.speed, 0, Math.cos(angle) * this.type.speed);
     this.numCollisions = 0;
     this.invinciblity = 0;
-    this.shapes = shapes;
+    this.shapes = map.shapes;
+    this.materials = map.materials;
     this.map = map;
     this.lastCollidedBlock = null;
     this.hitboxOn = hitboxOn;
@@ -56,8 +72,6 @@ export class Bullet {
     this.timeSinceLastSpawn = 0;
 
     this.burstCount = 0;
-
-    this.materials = materials;
 
     Bullet.activeBullets.push(this);
   }
@@ -198,7 +212,7 @@ export class Bullet {
       let model_transform = Mat4.translation(this.position[0], this.position[1], this.position[2])
           .times(Mat4.scale(BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE, BULLET_SPHERE_SCALE));
       if (!this.hitboxOn) {
-        this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial);
+        this.shapes.bullet.draw(context, program_state, model_transform, this.materials.bulletMaterial.override({ color: this.type.color }));
       } else {
         // draw bullet hitbox
         const bulletMin = this.position.to3().minus(vec3(BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH));
@@ -268,19 +282,7 @@ export class Bullet {
       const zOverlap = bulletMin[2] <= tankMax[2] && bulletMax[2] >= tankMin[2];
 
       if (xOverlap && yOverlap && zOverlap && !tank.dead) {
-        // if it's the user...
-        if (i === 0) {
-          tank.dead = true;
-          this.shouldRenderBullet = false;
-          this.spawnSmokeBurst();
-          if (tank.type === TANK_TYPE_ENUM.USER) {
-            console.log("User died :((");
-          } else {
-            console.log("Enemy died");
-          }
-        }
-        // if it's NOT the user...
-        if (i !== 0 && this.hits_enemies === true) {
+        if (tank.type === TANK_TYPE_ENUM.USER || tank.type !== TANK_TYPE_ENUM.USER && this.hits_enemies === true) {
           tank.dead = true;
           this.shouldRenderBullet = false;
           this.spawnSmokeBurst();
@@ -382,4 +384,4 @@ export class Bullet {
   }
 }
 
-export { BULLET_HEIGHT, BULLET_WIDTH, BULLET_DEPTH, BULLET_SCALE }
+export { Bullet, BULLET_TYPE_ENUM, BULLET_HEIGHT, BULLET_WIDTH, BULLET_DEPTH, BULLET_SCALE }

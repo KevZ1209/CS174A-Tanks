@@ -1,47 +1,51 @@
-import {defs, Subdivision_Sphere, tiny} from '../examples/common.js';
-import { Shape_From_File } from '../examples/obj-file-demo.js';
+import { tiny } from '../examples/common.js';
 import { Bomb } from './bomb.js';
-import {Bullet} from "./bullet.js";
-import {Text_Line} from "../examples/text-demo.js";
-import {MAP_SCHEMATIC_ENUM} from "./map.js";
-import { BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH, BULLET_SCALE } from './bullet.js';
+import { Bullet, BULLET_TYPE_ENUM, BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH, BULLET_SCALE } from "./bullet.js";
+import { MAP_SCHEMATIC_ENUM } from "./map.js";
+import { GAME_STATE_ENUM } from '../game-scene.js';
 
-const { vec3, hex_color, Mat4, Material, Texture } = tiny;
-const { Textured_Phong } = defs;
+const { vec3, hex_color, Mat4 } = tiny;
 
 const TANK_SCALE = 0.75;
 const TANK_WIDTH = 0.65;
 const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.65;
 const MAX_CLIP_SIZE = 4;
-const RELOAD_TIME = 1500;
-const STATIONARY_RELOAD_TIME = 3000;
 const MOVEMENT_SPEED = 4;
 const ROTATION_SPEED = 2;
 const DODGE_DISTANCE = 1.8;
 const BULLET_CHECK_INTERVAL = 2;
-const LEVEL_START_STATE = 2;
 
 const TANK_TYPE_ENUM = {
   USER: {
     color: hex_color("#0F65DE"),
-    canPlaceBombs: true
+    can_place_bombs: true,
+    bullet_type: BULLET_TYPE_ENUM.USER,
+    reload_time: 1500
   },
   ENEMY_STATIONARY: {
     color: hex_color("#C68C2F"),
-    canPlaceBombs: false
+    can_place_bombs: false,
+    bullet_type: BULLET_TYPE_ENUM.NORMAL,
+    reload_time: 5000
   },
   ENEMY_MOVING: {
     color: hex_color("#7A705F"),
-    canPlaceBombs: false
+    can_place_bombs: false,
+    bullet_type: BULLET_TYPE_ENUM.NORMAL,
+    reload_time: 3000
   },
   ENEMY_MOVING_BOMB: {
     color: hex_color("#DDC436"),
-    canPlaceBombs: true
+    can_place_bombs: true,
+    bullet_type: BULLET_TYPE_ENUM.NORMAL,
+    reload_time: 4000
   },
   ENEMY_MOVING_FAST_SHOOTING: {
     color: hex_color("#3F7F6F"),
-    canPlaceBombs: false
+    can_place_bombs: false,
+    bullet_type: BULLET_TYPE_ENUM.FAST,
+    reload_time: 3000
   }
 };
 
@@ -82,7 +86,7 @@ class Tank {
     this.shapes = this.map.shapes;
   }
 
-  render(context, program_state, user_x=0, user_z=0, start=true) {
+  render(context, program_state, user_x=0, user_z=0) {
     this.user_x = user_x;
     this.user_z = user_z;
     if (!this.dead) {
@@ -103,45 +107,43 @@ class Tank {
       const t = program_state.animation_time;
       const dt = program_state.animation_delta_time / 1000;
 
-      if (this.type === TANK_TYPE_ENUM.USER) {
-
-        // reload bullets
-        if (this.clip >= MAX_CLIP_SIZE) {
-          this.last_reload_time = t
-        } else if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > RELOAD_TIME) {
-          this.clip++;
-          this.last_reload_time = t;
-        }
+      // reload bullets
+      if (this.clip < MAX_CLIP_SIZE && t - this.last_reload_time > this.type.reload_time) {
+        this.clip++;
+        this.last_reload_time = t;
       }
 
-    if (this.type !== TANK_TYPE_ENUM.USER && (this.map.state === 3 || this.map.state === 9)) {
+      // enemy tank AI
+      if (this.type !== TANK_TYPE_ENUM.USER && 
+          (this.map.state === GAME_STATE_ENUM.LEVEL_STATE || this.map.state === GAME_STATE_ENUM.DEV_STATE) &&
+          !this.map.user.dead
+        ) {
+        // update movement
         this.updateAIMovement(dt);
-    }
 
-    if (this.targetPosition && !this.reachedTarget) {
-        if (this.targetBodyOrientation !== null && Math.abs(this.body_orientation - this.targetBodyOrientation) > 0.01) {
-            this.rotateTowardsTargetAngle(dt);
+        // rotate tank turret
+        const target_angle = this.calculateAngleToUser();
+        this.angle = target_angle;
+        if (!this.wallsInFront()) {
+          this.rotateTurretTowardsTargetAngle(target_angle, dt);
         } else {
-            this.moveTowardsTarget(dt);
+          this.rotatePeriodically(dt);
         }
-    }
 
-      if (this.type !== TANK_TYPE_ENUM.USER) {
-        if (start) {
-          const target_angle = this.calculateAngleToUser();
-          this.angle = target_angle;
-          if (!this.wallsInFront()) {
-            this.smoothRotateTowardsAngle(target_angle, dt);
+        // move and rotate tank body
+        if (this.targetPosition && !this.reachedTarget) {
+          if (this.targetBodyOrientation !== null && Math.abs(this.body_orientation - this.targetBodyOrientation) > 0.01) {
+            this.rotateBodyTowardsTargetAngle(dt);
           } else {
-            this.rotatePeriodically(dt);
+            this.moveTowardsTarget(dt);
           }
+        }
 
-
-          if (t - this.last_reload_time > STATIONARY_RELOAD_TIME+ 8000*Math.random()) {
-            if (!this.wallsInFront()) {
-              this.shootBullet();
-              this.last_reload_time = t;
-            }
+        // shoot user if in view
+        if (t - this.last_reload_time > this.type.reload_time + (8000 * Math.random())) {
+          if (!this.wallsInFront()) {
+            this.shootBullet(this.x, this.z, this.angle, this.type.bullet_type, false, false, false);
+            this.last_reload_time = t;
           }
         }
       }
@@ -161,7 +163,7 @@ class Tank {
     return Math.atan2(dx, dz);
   }
 
-  smoothRotateTowardsAngle(target_angle, dt) {
+  rotateTurretTowardsTargetAngle(target_angle, dt) {
     let angle_difference = target_angle - this.render_angle;
 
     // Normalize the angle_difference to the range [-π, π] without using modulus
@@ -199,22 +201,21 @@ class Tank {
     this.render_angle = (this.render_angle + 2 * Math.PI) % (2 * Math.PI); // Normalize angle to [0, 2π]
   }
 
-  // shoots a red bullet towards the current tank angle
-  shootBullet() {
-
+  shootBullet(x, z, angle, bullet_type, hitboxOn, haveUnlimitedBullets, hits_enemies) {
     let bullet = new Bullet(
-        this.x,
-        this.z,
-        this.angle,
-        this.shapes,
-        this.materials,
-        this.map,
-        false,
-        false
+      x,
+      z,
+      angle,
+      this.map,
+      bullet_type,
+      hitboxOn,
+      hits_enemies
     )
     this.map.bullet_queue.push(bullet);
     bullet.spawnSmokeBurst();
-
+    if (!haveUnlimitedBullets) {
+      this.clip--;
+    }
   }
 
   wallsInFront() {
@@ -408,7 +409,7 @@ class Tank {
     return distance < DODGE_DISTANCE;
   }
 
-  rotateTowardsTargetAngle(dt) {
+  rotateBodyTowardsTargetAngle(dt) {
     const angleDifference = this.targetBodyOrientation - this.body_orientation;
     let rotationSpeed = Math.PI * this.rotationSpeed * dt;
     if (this.chasePlayer) rotationSpeed=rotationSpeed * 2;
@@ -518,7 +519,7 @@ class Tank {
   }
 
   placeBomb() {
-    if (!this.dead && this.type.canPlaceBombs && !this.bombActive) {
+    if (!this.dead && this.type.can_place_bombs && !this.bombActive) {
       this.bombActive = true;
       let bomb = new Bomb(this.map, this.x, this.z, this);
       this.map.bomb_queue.push(bomb);

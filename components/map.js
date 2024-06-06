@@ -46,6 +46,7 @@ class Map {
             x: new defs.Square(),
             bullet: new Subdivision_Sphere(4),
             sphere: new Subdivision_Sphere(1),
+            cube: new defs.Cube()
         };
 
         this.materials = {

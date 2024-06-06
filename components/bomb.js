@@ -141,14 +141,11 @@ class Bomb {
         tank.dead = true;
         if (tank.type === TANK_TYPE_ENUM.USER) {
           console.log("user died :((")
-          // TODO: reduce user lives, handle game loop
         } else {
           console.log("enemy died")
         }
       }
     }
-
-    // this.map.enemies = newEnemies;
   }
 }
 

@@ -18,16 +18,18 @@ const MAX_LEVELS = schematics.length;
 const TANK_SPEED = 0.035;
 const INITIAL_LIVES = 3;
 
-const TITLE_STATE = 0;
-const LEVEL_INFO_STATE = 1;
-const LEVEL_START_STATE = 2;
-const LEVEL_STATE = 3;
-const LEVEL_CLEARED_STATE = 4;
-const LEVEL_FAILED_STATE = 5;
-const PAUSED_STATE = 6;
-const LOSE_STATE = 7;
-const WIN_STATE = 8;
-const DEV_STATE = 9;
+const GAME_STATE_ENUM = {
+    TITLE_STATE: 0,
+    LEVEL_INFO_STATE: 1,
+    LEVEL_START_STATE: 2,
+    LEVEL_STATE: 3,
+    LEVEL_CLEARED_STATE: 4,
+    LEVEL_FAILED_STATE: 5,
+    PAUSED_STATE: 6,
+    LOSE_STATE: 7,
+    WIN_STATE: 8,
+    DEV_STATE: 9
+}
 
 // durations in seconds
 const TITLE_STATE_DURATION = 4000;
@@ -38,13 +40,13 @@ const LEVEL_FAILED_STATE_DURATION = 3000;
 const LEVEL_DURATION = 32000;
 const BACKGROUND_SPEED = 1.5;
 
-export class GameScene extends Scene {
+class GameScene extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
         this.initialized = false;
-        this.state = DEV_STATE; // TODO: change this to TITLE_STATE for production
+        this.state = GAME_STATE_ENUM.DEV_STATE; // TODO: change this to TITLE_STATE for production
         this.continue = false;
         this.stateStart = 0;
         this.startOpacity = 1;
@@ -96,10 +98,7 @@ export class GameScene extends Scene {
         this.shapes = {
             square: new defs.Square(),
             ammo: new Subdivision_Sphere(4),
-            bullet: new Subdivision_Sphere(4),
-            sphere: new Subdivision_Sphere(1),
             text: new Text_Line(35),
-            cube: new defs.Cube()
         };
 
         // materials
@@ -112,12 +111,6 @@ export class GameScene extends Scene {
             }),
             ammo: new Material(new defs.Phong_Shader(), {
                 ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-            }),
-            bulletMaterial: new Material(new defs.Phong_Shader(), {
-                ambient: .4, diffusivity: .6, color: hex_color("#ffffff")
-            }),
-            smoke: new Material(new defs.Phong_Shader(), {
-                ambient: .4, diffusivity: .6, color: hex_color("#d2d0d0"), specularity: 0.1
             }),
             banner_red: new Material(new defs.Textured_Phong(1), {
                 ambient: 1, diffusivity: 0, specularity: 0,
@@ -134,9 +127,7 @@ export class GameScene extends Scene {
             background: new Material(new defs.Textured_Phong(1), {
                 ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/background.png")
-            }),
-            hitbox: new Material(new defs.Phong_Shader(),
-                { ambient: .4, diffusivity: .6, color: hex_color("#ffffff") }),
+            })
         };
     }
 
@@ -158,10 +149,10 @@ export class GameScene extends Scene {
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Toggle Dev Mode", ["l"], () => {
-            if (this.state === DEV_STATE) {
-                this.state = TITLE_STATE;
+            if (this.state === GAME_STATE_ENUM.DEV_STATE) {
+                this.state = GAME_STATE_ENUM.TITLE_STATE;
             } else {
-                this.state = DEV_STATE;
+                this.state = GAME_STATE_ENUM.DEV_STATE;
                 this.map.initializeLevel(0);
             }
         },
@@ -228,7 +219,7 @@ export class GameScene extends Scene {
         e.preventDefault();
         const t = program_state.animation_time;
 
-        if ((this.state === LEVEL_STATE || this.state === DEV_STATE) && !this.user.dead && (t - this.lastShotTime >= this.shotCooldown)) {
+        if ((this.state === GAME_STATE_ENUM.LEVEL_STATE || this.state === GAME_STATE_ENUM.DEV_STATE) && !this.user.dead && (t - this.lastShotTime >= this.shotCooldown)) {
             if (this.user.clip <= 0) {
                 return;
             }
@@ -238,29 +229,15 @@ export class GameScene extends Scene {
             let [pos_world_ground, pos_world_cursor] = this.convertSStoWS(this.getMousePosition(e, rect), program_state, 0);
             let angle = Math.atan2(pos_world_ground[0] - user_x, pos_world_ground[2] - user_z)
 
-            // add bullet to animation queue
-            let bullet = new Bullet(
-                user_x,
-                user_z,
-                angle,
-                this.shapes,
-                this.materials,
-                this.map,
-                this.hitboxOn
-            )
-            this.map.bullet_queue.push(bullet);
-            bullet.spawnSmokeBurst();
-            if (!this.haveUnlimitedBullets) {
-                this.user.clip--;
-            }
-        } else if (this.state === LOSE_STATE) {
+            this.user.shootBullet(user_x, user_z, angle, this.user.type.bullet_type, this.hitboxOn, this.haveUnlimitedBullets, true);
+        } else if (this.state === GAME_STATE_ENUM.LOSE_STATE) {
             this.continue = true;
         }
         this.lastShotTime = t;
     }
 
     handleBomb() {
-        if ((this.state === LEVEL_STATE || this.state === DEV_STATE) && !this.user.dead) {
+        if ((this.state === GAME_STATE_ENUM.LEVEL_STATE || this.state === GAME_STATE_ENUM.DEV_STATE) && !this.user.dead) {
             this.user.placeBomb()
         }
     }
@@ -305,7 +282,7 @@ export class GameScene extends Scene {
             // remove default cursor
             canvas.style.cursor = "none";
 
-            if (this.state === DEV_STATE) {
+            if (this.state === GAME_STATE_ENUM.DEV_STATE) {
                 this.map.initializeLevel(0)
             }
         }
@@ -329,7 +306,7 @@ export class GameScene extends Scene {
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
         // ** Game Loop **
-        if (this.state === TITLE_STATE) {
+        if (this.state === GAME_STATE_ENUM.TITLE_STATE) {
             let text_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform)
             this.shapes.text.set_string("Tanks!", context.context);
             this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
@@ -339,11 +316,11 @@ export class GameScene extends Scene {
             if (t - this.stateStart >= TITLE_STATE_DURATION) {
                 console.log("title state --> info state level " + this.level)
                 this.level = 1;
-                this.state = LEVEL_INFO_STATE;
+                this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
                 this.stateStart = t;
                 this.map.initializeLevel(this.level);
             }
-        } else if (this.state === LEVEL_INFO_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.LEVEL_INFO_STATE) {
             let model_transform = Mat4.translation(12, 1.1, 12).times(this.textTransform)
             this.shapes.text.set_string(`Level ${this.level}`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
@@ -361,11 +338,11 @@ export class GameScene extends Scene {
 
             if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
                 console.log(`info for level ${this.level} --> starting level ${this.level}`)
-                this.state = LEVEL_START_STATE;
-                this.map.state = LEVEL_START_STATE;
+                this.state = GAME_STATE_ENUM.LEVEL_START_STATE;
+                this.map.state = GAME_STATE_ENUM.LEVEL_START_STATE;
                 this.stateStart = t;
             }
-        } else if (this.state === LEVEL_START_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.LEVEL_START_STATE) {
             this.map.render(context, program_state, false);
             this.map.clearBulletQueue();
             this.user.render(context, program_state);
@@ -373,11 +350,11 @@ export class GameScene extends Scene {
 
             if (t - this.stateStart >= LEVEL_START_STATE_DURATION) {
                 console.log(`starting level ${this.level} --> level ${this.level}`)
-                this.state = LEVEL_STATE;
-                this.map.state = LEVEL_STATE;
+                this.state = GAME_STATE_ENUM.LEVEL_STATE;
+                this.map.state = GAME_STATE_ENUM.LEVEL_STATE;
                 this.stateStart = t;
             }
-        } else if (this.state === LEVEL_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.LEVEL_STATE) {
             if (t <= this.stateStart + 1000) {
                 this.startOpacity -= dt;
                 let model_transform = Mat4.translation(14, 1.2, 16).times(this.textTransform);
@@ -389,7 +366,7 @@ export class GameScene extends Scene {
                 // level timeout
                 console.log(`level ${this.level} --> failed level ${this.level} due to timeout`)
                 this.lives--;
-                this.state = LEVEL_FAILED_STATE;
+                this.state = GAME_STATE_ENUM.LEVEL_FAILED_STATE;
                 this.stateStart = t;
             } else {
                 if (!this.user.dead) {
@@ -411,18 +388,18 @@ export class GameScene extends Scene {
                     if (nextLevel) {
                         console.log(`level ${this.level} --> cleared level ${this.level}`)
                         this.level += 1;
-                        this.state = LEVEL_CLEARED_STATE;
+                        this.state = GAME_STATE_ENUM.LEVEL_CLEARED_STATE;
                         this.stateStart = t;
                     }
                 } else {
                     // user died
                     console.log(`level ${this.level} --> failed level ${this.level} due to user death`);
                     this.lives--;
-                    this.state = LEVEL_FAILED_STATE;
+                    this.state = GAME_STATE_ENUM.LEVEL_FAILED_STATE;
                     this.stateStart = t;
                 }
             }
-        } else if (this.state === LEVEL_CLEARED_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.LEVEL_CLEARED_STATE) {
             this.map.clearBulletQueue();
             if (t - this.stateStart >= 1000) {
                 let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
@@ -438,16 +415,16 @@ export class GameScene extends Scene {
             if (t - this.stateStart >= LEVEL_CLEARED_STATE_DURATION) {
                 if (this.level >= MAX_LEVELS) {
                     console.log(`cleared level ${this.level} --> win`)
-                    this.state = WIN_STATE;
+                    this.state = GAME_STATE_ENUM.WIN_STATE;
                     this.stateStart = t;
                 } else {
                     console.log(`cleared level ${this.level} --> starting level ${this.level}`)
-                    this.state = LEVEL_INFO_STATE;
+                    this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
                     this.stateStart = t;
                     this.map.initializeLevel(this.level);
                 }
             }
-        } else if (this.state === LEVEL_FAILED_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.LEVEL_FAILED_STATE) {
             if (t - this.stateStart >= 1000) {
                 let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
                 this.shapes.text.set_string(`Level Failed`, context.context);
@@ -462,16 +439,16 @@ export class GameScene extends Scene {
             if (t - this.stateStart >= LEVEL_FAILED_STATE_DURATION) {
                 if (this.lives === 0) {
                     console.log(`failed level ${this.level} --> lose`)
-                    this.state = LOSE_STATE;
+                    this.state = GAME_STATE_ENUM.LOSE_STATE;
                     this.stateStart = t;
                 } else {
                     console.log(`failed level ${this.level} --> info for level ${this.level}`)
-                    this.state = LEVEL_INFO_STATE;
+                    this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
                     this.stateStart = t;
                     this.map.initializeLevel(this.level);
                 }
             }
-        } else if (this.state === LOSE_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.LOSE_STATE) {
             let model_transform1 = Mat4.translation(4, 1.2, 13).times(this.textTransform)
             this.shapes.text.set_string(`Mission Failed`, context.context);
             this.shapes.text.draw(context, program_state, model_transform1, this.materials.text_image);
@@ -486,12 +463,12 @@ export class GameScene extends Scene {
             if (this.continue) {
                 console.log(`lose --> info for level 1`)
                 this.level = 1;
-                this.state = LEVEL_INFO_STATE;
+                this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
                 this.stateStart = t;
                 this.lives = INITIAL_LIVES;
                 this.user.dead = false;
             }
-        } else if (this.state === WIN_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.WIN_STATE) {
             let model_transform = Mat4.translation(12, 1.2, 13).times(this.textTransform)
             this.shapes.text.set_string(`You Win!`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
@@ -502,7 +479,7 @@ export class GameScene extends Scene {
 
             this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
-        } else if (this.state === DEV_STATE) {
+        } else if (this.state === GAME_STATE_ENUM.DEV_STATE) {
             if (!this.user.dead) {
                 this.moveUser();
             }
@@ -550,4 +527,4 @@ export class GameScene extends Scene {
     }
 }
 
-
+export { GameScene, GAME_STATE_ENUM }
