@@ -40,12 +40,20 @@ const LEVEL_FAILED_STATE_DURATION = 3000;
 const LEVEL_DURATION = 32000;
 const BACKGROUND_SPEED = 1.5;
 
+const THEME_MUSIC = new Audio("audio/theme.mp3");
+const LEVEL_START_MUSIC = new Audio("audio/level-start.mp3");
+const LEVEL_SUCCESS_MUSIC = new Audio("audio/level-success.mp3");
+const LEVEL_FAILURE_MUSIC = new Audio("audio/level-failure.mp3");
+const LEVEL_VARIATION_1_MUSIC = new Audio("audio/level-variation-1.mp3");
+const GAME_OVER_MUSIC = new Audio("audio/game-over.mp3");
+
 class GameScene extends Scene {
     constructor() {
         // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         super();
 
         this.initialized = false;
+        this.startGame = false;
         this.state = GAME_STATE_ENUM.DEV_STATE; // TODO: change this to TITLE_STATE for production
         this.continue = false;
         this.stateStart = 0;
@@ -149,12 +157,17 @@ class GameScene extends Scene {
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Toggle Dev Mode", ["l"], () => {
-            if (this.state === GAME_STATE_ENUM.DEV_STATE) {
-                this.state = GAME_STATE_ENUM.TITLE_STATE;
-            } else {
-                this.state = GAME_STATE_ENUM.DEV_STATE;
-                this.map.initializeLevel(0);
+            if (this.startGame) {
+                if (this.state === GAME_STATE_ENUM.DEV_STATE) {
+                    this.state = GAME_STATE_ENUM.TITLE_STATE;
+                } else {
+                    this.state = GAME_STATE_ENUM.DEV_STATE;
+                    this.map.initializeLevel(0);
+                }
+                this.stopRestartMusic();
+                THEME_MUSIC.play();
             }
+            
         },
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
@@ -165,6 +178,12 @@ class GameScene extends Scene {
         this.new_line();
         this.key_triggered_button("Hitbox on", ["h"], () => {
                 this.hitboxOn = !this.hitboxOn;
+            },
+            "#6E6460", () => { this.direction.right = false });
+        this.key_triggered_button("Start Game", ["Enter"], () => {
+                this.startGame = true;
+                this.stopRestartMusic();
+                THEME_MUSIC.play();
             },
             "#6E6460", () => { this.direction.right = false });
     }
@@ -306,187 +325,227 @@ class GameScene extends Scene {
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
 
         // ** Game Loop **
-        if (this.state === GAME_STATE_ENUM.TITLE_STATE) {
-            let text_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform)
-            this.shapes.text.set_string("Tanks!", context.context);
-            this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
-            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
-            this.displayBackground(context, program_state);
+        if (this.startGame) {
+            if (this.state === GAME_STATE_ENUM.TITLE_STATE) {
+                let text_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform)
+                this.shapes.text.set_string("Tanks!", context.context);
+                this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
+                this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+                this.displayBackground(context, program_state);
 
-            if (t - this.stateStart >= TITLE_STATE_DURATION) {
-                console.log("title state --> info state level " + this.level)
-                this.level = 1;
-                this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
-                this.stateStart = t;
-                this.map.initializeLevel(this.level);
-            }
-        } else if (this.state === GAME_STATE_ENUM.LEVEL_INFO_STATE) {
-            let model_transform = Mat4.translation(12, 1.1, 12).times(this.textTransform)
-            this.shapes.text.set_string(`Level ${this.level}`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+                if (t - this.stateStart >= TITLE_STATE_DURATION) {
+                    console.log("title state --> info state level " + this.level)
+                    this.level = 1;
+                    this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
+                    this.stateStart = t;
+                    this.map.initializeLevel(this.level);
 
-            let model_transform2 = Mat4.translation(9, 1.2, 16).times(this.subtextTransform)
-            this.shapes.text.set_string(`Enemy tanks: ${this.map.enemies.length}`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
-
-            let model_transform3 = Mat4.translation(13.5, 1.2, 18.7).times(this.subtextTransform)
-            this.shapes.text.set_string(`Lives: ${this.lives}`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform3, this.materials.text_image);
-
-            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
-            this.displayBackground(context, program_state);
-
-            if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
-                console.log(`info for level ${this.level} --> starting level ${this.level}`)
-                this.state = GAME_STATE_ENUM.LEVEL_START_STATE;
-                this.map.state = GAME_STATE_ENUM.LEVEL_START_STATE;
-                this.stateStart = t;
-            }
-        } else if (this.state === GAME_STATE_ENUM.LEVEL_START_STATE) {
-            this.map.render(context, program_state, false);
-            this.map.clearBulletQueue();
-            this.user.render(context, program_state);
-            this.renderUserInfo(context, program_state);
-
-            if (t - this.stateStart >= LEVEL_START_STATE_DURATION) {
-                console.log(`starting level ${this.level} --> level ${this.level}`)
-                this.state = GAME_STATE_ENUM.LEVEL_STATE;
-                this.map.state = GAME_STATE_ENUM.LEVEL_STATE;
-                this.stateStart = t;
-            }
-        } else if (this.state === GAME_STATE_ENUM.LEVEL_STATE) {
-            if (t <= this.stateStart + 1000) {
-                this.startOpacity -= dt;
-                let model_transform = Mat4.translation(14, 1.2, 16).times(this.textTransform);
-                this.shapes.text.set_string(`Start!`, context.context);
+                    this.stopRestartMusic();
+                    LEVEL_START_MUSIC.play();
+                }
+            } else if (this.state === GAME_STATE_ENUM.LEVEL_INFO_STATE) {
+                let model_transform = Mat4.translation(12, 1.1, 12).times(this.textTransform)
+                this.shapes.text.set_string(`Level ${this.level}`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
-            }
 
-            if (t > this.stateStart + LEVEL_DURATION) {
-                // level timeout
-                console.log(`level ${this.level} --> failed level ${this.level} due to timeout`)
-                this.lives--;
-                this.state = GAME_STATE_ENUM.LEVEL_FAILED_STATE;
-                this.stateStart = t;
-            } else {
-                if (!this.user.dead) {
-                    this.moveUser()
-                    this.map.render(context, program_state, true);
-                    this.user.render(context, program_state);
-                    this.renderUserInfo(context, program_state);
+                let model_transform2 = Mat4.translation(9, 1.2, 16).times(this.subtextTransform)
+                this.shapes.text.set_string(`Enemy tanks: ${this.map.enemies.length}`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-                    // if all enemies are dead, continue to the next level
-                    let nextLevel = true;
-                    for (let enemy of this.map.enemies) {
-                        if (enemy.dead) {
-                            nextLevel = nextLevel & true;
-                        } else {
-                            nextLevel = nextLevel & false;
-                        }
-                    }
+                let model_transform3 = Mat4.translation(13.5, 1.2, 18.7).times(this.subtextTransform)
+                this.shapes.text.set_string(`Lives: ${this.lives}`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform3, this.materials.text_image);
 
-                    if (nextLevel) {
-                        console.log(`level ${this.level} --> cleared level ${this.level}`)
-                        this.level += 1;
-                        this.state = GAME_STATE_ENUM.LEVEL_CLEARED_STATE;
-                        this.stateStart = t;
-                    }
-                } else {
-                    // user died
-                    console.log(`level ${this.level} --> failed level ${this.level} due to user death`);
+                this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+                this.displayBackground(context, program_state);
+
+                if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
+                    console.log(`info for level ${this.level} --> starting level ${this.level}`)
+                    this.state = GAME_STATE_ENUM.LEVEL_START_STATE;
+                    this.map.state = GAME_STATE_ENUM.LEVEL_START_STATE;
+                    this.stateStart = t;
+
+                    this.stopRestartMusic();
+                    LEVEL_VARIATION_1_MUSIC.play();
+                }
+            } else if (this.state === GAME_STATE_ENUM.LEVEL_START_STATE) {
+                this.map.render(context, program_state, false);
+                this.map.clearBulletQueue();
+                this.user.render(context, program_state);
+                this.renderUserInfo(context, program_state);
+
+                if (t - this.stateStart >= LEVEL_START_STATE_DURATION) {
+                    console.log(`starting level ${this.level} --> level ${this.level}`)
+                    this.state = GAME_STATE_ENUM.LEVEL_STATE;
+                    this.map.state = GAME_STATE_ENUM.LEVEL_STATE;
+                    this.stateStart = t;
+                }
+            } else if (this.state === GAME_STATE_ENUM.LEVEL_STATE) {
+                if (t <= this.stateStart + 1000) {
+                    this.startOpacity -= dt;
+                    let model_transform = Mat4.translation(14, 1.2, 16).times(this.textTransform);
+                    this.shapes.text.set_string(`Start!`, context.context);
+                    this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+                }
+
+                if (t > this.stateStart + LEVEL_DURATION) {
+                    // level timeout
+                    console.log(`level ${this.level} --> failed level ${this.level} due to timeout`)
                     this.lives--;
                     this.state = GAME_STATE_ENUM.LEVEL_FAILED_STATE;
                     this.stateStart = t;
-                }
-            }
-        } else if (this.state === GAME_STATE_ENUM.LEVEL_CLEARED_STATE) {
-            this.map.clearBulletQueue();
-            if (t - this.stateStart >= 1000) {
-                let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
-                this.shapes.text.set_string(`Level Cleared!`, context.context);
-                this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
-                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
-            }
 
-            this.map.render(context, program_state);
-            this.user.render(context, program_state);
-            this.renderUserInfo(context, program_state);
-
-            if (t - this.stateStart >= LEVEL_CLEARED_STATE_DURATION) {
-                if (this.level >= MAX_LEVELS) {
-                    console.log(`cleared level ${this.level} --> win`)
-                    this.state = GAME_STATE_ENUM.WIN_STATE;
-                    this.stateStart = t;
+                    this.stopRestartMusic();
+                    LEVEL_FAILURE_MUSIC.play();
                 } else {
-                    console.log(`cleared level ${this.level} --> starting level ${this.level}`)
+                    if (!this.user.dead) {
+                        this.moveUser()
+                        this.map.render(context, program_state, true);
+                        this.user.render(context, program_state);
+                        this.renderUserInfo(context, program_state);
+
+                        // if all enemies are dead, continue to the next level
+                        let nextLevel = true;
+                        for (let enemy of this.map.enemies) {
+                            if (enemy.dead) {
+                                nextLevel = nextLevel & true;
+                            } else {
+                                nextLevel = nextLevel & false;
+                            }
+                        }
+
+                        if (nextLevel) {
+                            console.log(`level ${this.level} --> cleared level ${this.level}`)
+                            this.level += 1;
+                            this.state = GAME_STATE_ENUM.LEVEL_CLEARED_STATE;
+                            this.stateStart = t;
+
+                            this.stopRestartMusic();
+                            LEVEL_SUCCESS_MUSIC.play();
+                        }
+                    } else {
+                        // user died
+                        console.log(`level ${this.level} --> failed level ${this.level} due to user death`);
+                        this.lives--;
+                        this.state = GAME_STATE_ENUM.LEVEL_FAILED_STATE;
+                        this.stateStart = t;
+
+                        this.stopRestartMusic();
+                        LEVEL_FAILURE_MUSIC.play();
+                    }
+                }
+            } else if (this.state === GAME_STATE_ENUM.LEVEL_CLEARED_STATE) {
+                this.map.clearBulletQueue();
+                if (t - this.stateStart >= 1000) {
+                    let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+                    this.shapes.text.set_string(`Level Cleared!`, context.context);
+                    this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+                    this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+                }
+
+                this.map.render(context, program_state);
+                this.user.render(context, program_state);
+                this.renderUserInfo(context, program_state);
+
+                if (t - this.stateStart >= LEVEL_CLEARED_STATE_DURATION) {
+                    if (this.level >= MAX_LEVELS) {
+                        console.log(`cleared level ${this.level} --> win`)
+                        this.state = GAME_STATE_ENUM.WIN_STATE;
+                        this.stateStart = t;
+
+                        this.stopRestartMusic();
+                        THEME_MUSIC.play();
+                    } else {
+                        console.log(`cleared level ${this.level} --> starting level ${this.level}`)
+                        this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
+                        this.stateStart = t;
+                        this.map.initializeLevel(this.level);
+
+                        this.stopRestartMusic();
+                        LEVEL_START_MUSIC.play();
+                    }
+                }
+            } else if (this.state === GAME_STATE_ENUM.LEVEL_FAILED_STATE) {
+                if (t - this.stateStart >= 500) {
+                    let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+                    this.shapes.text.set_string(`Level Failed`, context.context);
+                    this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+                    this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
+                }
+
+                this.map.render(context, program_state, false);
+                this.user.render(context, program_state);
+                this.renderUserInfo(context, program_state);
+
+                if (t - this.stateStart >= LEVEL_FAILED_STATE_DURATION) {
+                    if (this.lives === 0) {
+                        console.log(`failed level ${this.level} --> lose`)
+                        this.state = GAME_STATE_ENUM.LOSE_STATE;
+                        this.stateStart = t;
+
+                        this.stopRestartMusic();
+                        GAME_OVER_MUSIC.play();
+                    } else {
+                        console.log(`failed level ${this.level} --> info for level ${this.level}`)
+                        this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
+                        this.stateStart = t;
+                        this.map.initializeLevel(this.level);
+
+                        this.stopRestartMusic();
+                        LEVEL_START_MUSIC.play();
+                    }
+                }
+            } else if (this.state === GAME_STATE_ENUM.LOSE_STATE) {
+                let model_transform1 = Mat4.translation(4, 1.2, 13).times(this.textTransform)
+                this.shapes.text.set_string(`Mission Failed`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform1, this.materials.text_image);
+
+                let model_transform2 = Mat4.translation(1, 1.2, 17).times(this.subtextTransform)
+                this.shapes.text.set_string(`Click anywhere to restart`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
+                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+                this.displayBackground(context, program_state);
+
+                if (this.continue) {
+                    console.log(`lose --> info for level 1`)
+                    this.level = 1;
                     this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
                     this.stateStart = t;
-                    this.map.initializeLevel(this.level);
+                    this.lives = INITIAL_LIVES;
+                    this.user.dead = false;
+
+                    this.stopRestartMusic();
+                    LEVEL_START_MUSIC.play();
                 }
-            }
-        } else if (this.state === GAME_STATE_ENUM.LEVEL_FAILED_STATE) {
-            if (t - this.stateStart >= 1000) {
-                let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
-                this.shapes.text.set_string(`Level Failed`, context.context);
+            } else if (this.state === GAME_STATE_ENUM.WIN_STATE) {
+                let model_transform = Mat4.translation(12, 1.2, 13).times(this.textTransform)
+                this.shapes.text.set_string(`You Win!`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
-                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
-            }
 
-            this.map.render(context, program_state, false);
-            this.user.render(context, program_state);
-            this.renderUserInfo(context, program_state);
+                let model_transform2 = Mat4.translation(7, 1.2, 17).times(this.subtextTransform)
+                this.shapes.text.set_string(`Thanks for playing`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-            if (t - this.stateStart >= LEVEL_FAILED_STATE_DURATION) {
-                if (this.lives === 0) {
-                    console.log(`failed level ${this.level} --> lose`)
-                    this.state = GAME_STATE_ENUM.LOSE_STATE;
-                    this.stateStart = t;
-                } else {
-                    console.log(`failed level ${this.level} --> info for level ${this.level}`)
-                    this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
-                    this.stateStart = t;
-                    this.map.initializeLevel(this.level);
+                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+                this.displayBackground(context, program_state);
+            } else if (this.state === GAME_STATE_ENUM.DEV_STATE) {
+                if (!this.user.dead) {
+                    this.moveUser();
                 }
-            }
-        } else if (this.state === GAME_STATE_ENUM.LOSE_STATE) {
-            let model_transform1 = Mat4.translation(4, 1.2, 13).times(this.textTransform)
-            this.shapes.text.set_string(`Mission Failed`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform1, this.materials.text_image);
-
-            let model_transform2 = Mat4.translation(1, 1.2, 17).times(this.subtextTransform)
-            this.shapes.text.set_string(`Click anywhere to restart`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
-
-            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
-            this.displayBackground(context, program_state);
-
-            if (this.continue) {
-                console.log(`lose --> info for level 1`)
-                this.level = 1;
-                this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
+                this.map.render(context, program_state);
+                this.user.render(context, program_state);
+                this.renderUserInfo(context, program_state);
                 this.stateStart = t;
-                this.lives = INITIAL_LIVES;
-                this.user.dead = false;
             }
-        } else if (this.state === GAME_STATE_ENUM.WIN_STATE) {
-            let model_transform = Mat4.translation(12, 1.2, 13).times(this.textTransform)
-            this.shapes.text.set_string(`You Win!`, context.context);
+        } else {
+            // pressing a button is required to make audio work in javascript code
+            let model_transform = Mat4.translation(-3, 1.2, 16).times(this.textTransform)
+            this.shapes.text.set_string(`Click Enter to start`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
 
-            let model_transform2 = Mat4.translation(7, 1.2, 17).times(this.subtextTransform)
-            this.shapes.text.set_string(`Thanks for playing`, context.context);
-            this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
-
-            this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
-        } else if (this.state === GAME_STATE_ENUM.DEV_STATE) {
-            if (!this.user.dead) {
-                this.moveUser();
-            }
-            this.map.render(context, program_state);
-            this.user.render(context, program_state);
-            this.renderUserInfo(context, program_state);
-            this.stateStart = t;
         }
     }
 
@@ -524,6 +583,21 @@ class GameScene extends Scene {
                 .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
             this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
         }
+    }
+
+    stopRestartMusic() {
+        THEME_MUSIC.pause();
+        THEME_MUSIC.currentTime = 0;
+        LEVEL_START_MUSIC.pause();
+        LEVEL_START_MUSIC.currentTime = 0;
+        LEVEL_SUCCESS_MUSIC.pause();
+        LEVEL_SUCCESS_MUSIC.currentTime = 0;
+        LEVEL_FAILURE_MUSIC.pause();
+        LEVEL_FAILURE_MUSIC.currentTime = 0;
+        LEVEL_VARIATION_1_MUSIC.pause();
+        LEVEL_VARIATION_1_MUSIC.currentTime = 0;
+        GAME_OVER_MUSIC.pause();
+        GAME_OVER_MUSIC.currentTime = 0;  
     }
 }
 
