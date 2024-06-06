@@ -40,6 +40,7 @@ const LEVEL_FAILED_STATE_DURATION = 3000;
 const LEVEL_DURATION = 32000;
 const BACKGROUND_SPEED = 1.5;
 
+// Source: https://downloads.khinsider.com/game-soundtracks/album/wii-play
 const THEME_MUSIC = new Audio("audio/theme.mp3");
 const LEVEL_START_MUSIC = new Audio("audio/level-start.mp3");
 const LEVEL_SUCCESS_MUSIC = new Audio("audio/level-success.mp3");
