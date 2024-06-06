@@ -15,7 +15,7 @@ const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = schematics.length;
-const TANK_SPEED = 0.15;
+const TANK_SPEED = 0.035;
 const INITIAL_LIVES = 3;
 
 const TITLE_STATE = 0;
@@ -217,6 +217,7 @@ export class GameScene extends Scene {
         let [user_x, user_z] = this.user.getPosition()
         let angle = Math.atan2(pos_world_ground[0] - user_x, pos_world_ground[2] - user_z);
         this.user.angle = angle;
+        this.user.render_angle = angle;
 
         // update cursor position
         this.cursor_x = pos_world_cursor[0]

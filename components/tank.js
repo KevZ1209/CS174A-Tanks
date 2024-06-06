@@ -15,7 +15,7 @@ const TANK_HEIGHT = 0.5;
 const TANK_DEPTH = 0.65;
 const MAX_CLIP_SIZE = 4;
 const RELOAD_TIME = 1500;
-const STATIONARY_RELOAD_TIME = 5000;
+const STATIONARY_RELOAD_TIME = 3000;
 const MOVEMENT_SPEED = 4;
 const ROTATION_SPEED = 2;
 const DODGE_DISTANCE = 1.8;
@@ -50,6 +50,7 @@ class Tank {
     this.x = initial_x;
     this.z = initial_z;
     this.angle = initial_angle
+    this.render_angle = initial_angle;
     this.map = map;
     this.type = type;
     this.bombActive = false;
@@ -74,6 +75,8 @@ class Tank {
     this.chasePlayer = false;
     this.bulletDodgeTimer = 0;
     this.isDodging = false;
+    this.rotationState = "clockwise";
+    this.accumulated_rotation = 0;
 
     this.materials = this.map.materials;
     this.shapes = this.map.shapes;
@@ -85,7 +88,7 @@ class Tank {
     if (!this.dead) {
       // tank alive
       let turret_transform = Mat4.identity().times(Mat4.translation(this.x, 0, this.z))
-        .times(Mat4.rotation(this.angle + Math.PI, 0, 3, 0)
+        .times(Mat4.rotation(this.render_angle + Math.PI, 0, 3, 0)
         // extra scale & translation for 3d object
         .times(Mat4.scale(0.4, 0.4, 0.4)
         .times(Mat4.translation(0, 1, -3.5))));
@@ -125,18 +128,22 @@ class Tank {
 
       if (this.type !== TANK_TYPE_ENUM.USER) {
         if (start) {
+          const target_angle = this.calculateAngleToUser();
+          this.angle = target_angle;
+          if (!this.wallsInFront()) {
+            this.smoothRotateTowardsAngle(target_angle, dt);
+          } else {
+            this.rotatePeriodically(dt);
+          }
 
-          this.pointTowardsUser();
 
-          if (t - this.last_reload_time > STATIONARY_RELOAD_TIME) {
+          if (t - this.last_reload_time > STATIONARY_RELOAD_TIME+ 8000*Math.random()) {
             if (!this.wallsInFront()) {
               this.shootBullet();
               this.last_reload_time = t;
             }
           }
-
         }
-
       }
 
     } else {
@@ -148,12 +155,48 @@ class Tank {
     }
   }
 
-  pointTowardsUser() {
+  calculateAngleToUser() {
     let dz = this.user_z - this.z;
     let dx = this.user_x - this.x;
+    return Math.atan2(dx, dz);
+  }
 
-    // set tank angle towards user
-    this.angle = Math.atan2(dx, dz);
+  smoothRotateTowardsAngle(target_angle, dt) {
+    let angle_difference = target_angle - this.render_angle;
+
+    // Normalize the angle_difference to the range [-π, π] without using modulus
+    while (angle_difference > Math.PI) angle_difference -= 2 * Math.PI;
+    while (angle_difference < -Math.PI) angle_difference += 2 * Math.PI;
+
+    const max_rotation = Math.PI * 2 * dt;
+    if (Math.abs(angle_difference) < max_rotation) {
+      this.render_angle = target_angle;
+    } else {
+      this.render_angle += Math.sign(angle_difference) * max_rotation;
+    }
+  }
+
+  rotatePeriodically(dt) {
+    const rotation_increment = Math.PI / 2; // 45 degrees
+    const max_rotation = Math.PI/4 * dt;
+
+    if (this.rotationState === 'clockwise') {
+      this.render_angle += max_rotation;
+      this.accumulated_rotation += max_rotation;
+      if (this.accumulated_rotation >= rotation_increment) {
+        this.rotationState = 'counterclockwise';
+        this.accumulated_rotation = 0;
+      }
+    } else {
+      this.render_angle -= max_rotation;
+      this.accumulated_rotation += max_rotation;
+      if (this.accumulated_rotation >= rotation_increment) {
+        this.rotationState = 'clockwise';
+        this.accumulated_rotation = 0;
+      }
+    }
+
+    this.render_angle = (this.render_angle + 2 * Math.PI) % (2 * Math.PI); // Normalize angle to [0, 2π]
   }
 
   // shoots a red bullet towards the current tank angle
@@ -240,7 +283,7 @@ class Tank {
     const playerPosition = this.map.user.getPosition();
     const distanceToPlayer = vec3(this.x, 0, this.z).minus(vec3(playerPosition[0], 0, playerPosition[1])).norm();
 
-    if (distanceToPlayer < 14) { // Chase player if within 10 units
+    if (distanceToPlayer < 14 && !this.wallsInFront()) { // Chase player if within 10 units
       this.setTargetPosition(playerPosition[0], playerPosition[1]);
       this.targetBodyOrientation = Math.atan2(playerPosition[0] - this.x, playerPosition[1] - this.z);
       this.chasePlayer = true;
@@ -248,6 +291,9 @@ class Tank {
       // Random movement if player is not nearby
       this.updateMovingEnemy(dt);
       this.chasePlayer = false;
+    }
+    if(distanceToPlayer < 5) {
+      this.placeBomb();
     }
   }
 
@@ -265,8 +311,8 @@ class Tank {
 
     const randomIndex = Math.floor(Math.random() * directions.length);
     const direction = directions.splice(randomIndex, 1)[0];
-    const newX = this.x + direction[0] * TANK_WIDTH * 3;
-    const newZ = this.z + direction[2] * TANK_DEPTH * 3;
+    const newX = this.x + direction[0] * TANK_WIDTH * 4;
+    const newZ = this.z + direction[2] * TANK_DEPTH * 4;
 
     this.setTargetPosition(newX, newZ);
     this.targetBodyOrientation = Math.atan2(direction[0], direction[2]);
@@ -283,9 +329,9 @@ class Tank {
     const distance = this.targetPosition.minus(vec3(this.x, 0, this.z)).norm();
     let slowFactor = 2000;
     if (this.chasePlayer) {
-      slowFactor = 1000;
+      slowFactor = 700;
     } else if (this.isDodging){
-      slowFactor = 800;
+      slowFactor = 600;
     }
 
 
@@ -335,18 +381,20 @@ class Tank {
     if (this.bulletDodgeTimer >= BULLET_CHECK_INTERVAL) {
 
       for (let bullet of Bullet.activeBullets) {
-        let futurePosition = bullet.position.to3();
-        const stepCount = 50; // Number of steps to predict bullet's future position
-        const stepSize = BULLET_CHECK_INTERVAL / (stepCount*2);
+        if (bullet.hits_enemies) {
+          let futurePosition = bullet.position.to3();
+          const stepCount = 50; // Number of steps to predict bullet's future position
+          const stepSize = BULLET_CHECK_INTERVAL / (stepCount*2);
 
-        for (let i = 0; i < stepCount; i++) {
-          futurePosition = futurePosition.plus(bullet.velocity.times(stepSize));
-          if (this.willBulletHitTank(futurePosition)) {
+          for (let i = 0; i < stepCount; i++) {
+            futurePosition = futurePosition.plus(bullet.velocity.times(stepSize));
+            if (this.willBulletHitTank(futurePosition)) {
 
-            this.isDodging = true;
-            this.bulletDodgeTimer = 0;
-            this.dodgeBullet(bullet);
-            return;
+              this.isDodging = true;
+              this.bulletDodgeTimer = 0;
+              this.dodgeBullet(bullet);
+              return;
+            }
           }
         }
       }
@@ -362,7 +410,8 @@ class Tank {
 
   rotateTowardsTargetAngle(dt) {
     const angleDifference = this.targetBodyOrientation - this.body_orientation;
-    const rotationSpeed = Math.PI * this.rotationSpeed * dt;
+    let rotationSpeed = Math.PI * this.rotationSpeed * dt;
+    if (this.chasePlayer) rotationSpeed=rotationSpeed * 2;
 
     if (Math.abs(angleDifference) < rotationSpeed) {
       this.body_orientation = this.targetBodyOrientation;
