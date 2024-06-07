@@ -67,7 +67,7 @@ class Bomb {
         } else {
           bombColor = BOMB_COLOR_YELLOW;
         }
-        this.shape.draw(context, program_state, Mat4.translation(this.x, -1, this.z), this.materials.bomb.override({ color: bombColor }));
+        this.shape.draw(context, program_state, Mat4.translation(this.x, 0, this.z), this.materials.bomb.override({ color: bombColor }));
       }
     }
 
