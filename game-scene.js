@@ -521,7 +521,7 @@ class GameScene extends Scene {
                 if (this.continue) {
                     console.log(`lose --> info for level 1`)
                     this.level = 1;
-                    this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
+                    this.state = GAME_STATE_ENUM.TITLE_STATE;
                     this.stateStart = t;
                     this.lives = INITIAL_LIVES;
                     this.user.dead = false;
