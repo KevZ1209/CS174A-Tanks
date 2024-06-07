@@ -363,14 +363,20 @@ class Tank {
       vec3(-2, 0, 0),
       vec3(0, 0, 2),
       vec3(0, 0, -2),
+
       vec3(2, 0, 0),
       vec3(-2, 0, 0),
       vec3(0, 0, 2),
-      vec3(0, 0, -2), // higher probability of horizontal/vertical movement
+      vec3(0, 0, -2),
 
       vec3(2,0,2),
       vec3(-2,0,2),
+      vec3(-2,0,2),
       vec3(2,0,-2),
+
+      vec3(2,0,-2),
+      vec3(-2,0,-2),
+      vec3(2,0,2),
       vec3(-2,0,-2),
     ];
     // console.log(this.prev_x, this.x, this.prev_z, this.z)
