@@ -14,3 +14,5 @@ export const BULLET_SHOOT_ENEMY_FAST_SHOOTING_SOUND = new Audio("audio/bullet_sh
 export const BULLET_HIT_RICOCHET_SOUND = new Audio("audio/bullet_hit_ricochet.mp3");
 export const BULLET_HIT_DONE_SOUND = new Audio("audio/bullet_hit_done.mp3");
 export const TANK_DESTROYED_SOUND = new Audio("audio/tank_destroyed.mp3");
+export const BOMB_PLACE_SOUND = new Audio("audio/bomb_place.mp3");
+export const BOMB_BEEP_SOUND = new Audio("audio/bomb_beep_2sec.mp3");

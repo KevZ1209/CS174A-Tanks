@@ -596,6 +596,7 @@ class Tank {
       this.bombActive = true;
       let bomb = new Bomb(this.map, this.x, this.z, this);
       this.map.bomb_queue.push(bomb);
+      AUDIO.BOMB_PLACE_SOUND.cloneNode().play();
     }
   }
 

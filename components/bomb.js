@@ -1,6 +1,7 @@
 import { Subdivision_Sphere, defs, tiny } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
 import { TANK_HEIGHT, TANK_WIDTH, TANK_DEPTH, TANK_TYPE_ENUM } from './tank.js';
+import * as AUDIO from "../components/audio.js";
 
 const { vec3, hex_color, Mat4, Material, Texture } = tiny;
 
@@ -29,6 +30,7 @@ class Bomb {
     this.explosionAge = 0;
     this.explosionAngle = 0;
     this.explosionScale = MAX_EXPLOSION_SCALE;
+    this.gonnaExplodeFlag = false;
 
     this.materials = {
       bomb: new Material(new defs.Phong_Shader(),
@@ -55,6 +57,12 @@ class Bomb {
         // bomb timer running
         let bombColor;
         if (this.age > BOMB_LIFETIME - 2) {
+          if (!this.gonnaExplodeFlag) {
+            let beep = AUDIO.BOMB_BEEP_SOUND.cloneNode()
+            beep.volume = 0.2;
+            beep.play();
+          }
+          this.gonnaExplodeFlag = true;
           bombColor = this.age % 0.14 < 0.07 ? BOMB_COLOR_YELLOW : BOMB_COLOR_RED;
         } else {
           bombColor = BOMB_COLOR_YELLOW;
@@ -85,6 +93,7 @@ class Bomb {
     this.active = false;
     this.exploding = true;
     this.owner.bombActive = false;
+    AUDIO.TANK_DESTROYED_SOUND.cloneNode().play();
 
     // remove blocks within radius
     this.updateCollisionMap();

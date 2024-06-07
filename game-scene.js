@@ -93,7 +93,7 @@ class GameScene extends Scene {
         this.cursor_z = INITIAL_CURSOR_Z;
 
         this.lastShotTime = 0;
-        this.shotCooldown = 200;
+        this.shotCooldown = 100;
         this.haveUnlimitedBullets = false;
         this.hitboxOn = false;
 
