@@ -18,7 +18,7 @@ const INVINCIBILITY_FRAMES = 0;
 const BULLET_OFFSET = 2;
 const BULLET_REMOVAL_DELAY = 450;
 // Delay before bullet can hit a tank
-const BULLET_COLLISION_DELAY = 0.05;
+const BULLET_COLLISION_DELAY = 0.08;
 
 const PARTICLE_SPAWN_RATE = 0.001;
 const PARTICLE_LIFETIME = 0.95;
