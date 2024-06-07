@@ -37,7 +37,7 @@ const LEVEL_INFO_STATE_DURATION = 4000;
 const LEVEL_START_STATE_DURATION = 3000;
 const LEVEL_CLEARED_STATE_DURATION = 3000;
 const LEVEL_FAILED_STATE_DURATION = 3000;
-const LEVEL_DURATION = 32000;
+const LEVEL_DURATION = 45000;
 const BACKGROUND_SPEED = 1.5;
 
 // Source: https://downloads.khinsider.com/game-soundtracks/album/wii-play
@@ -58,6 +58,7 @@ class GameScene extends Scene {
         this.state = GAME_STATE_ENUM.DEV_STATE; // TODO: change this to TITLE_STATE for production
         this.continue = false;
         this.stateStart = 0;
+        this.levelTimeRemaining = 45;
         this.startOpacity = 1;
         this.startScale = 1;
         this.textTransform = Mat4.rotation(-Math.PI / 2, 1, 0, 0)
@@ -365,6 +366,7 @@ class GameScene extends Scene {
                     this.state = GAME_STATE_ENUM.LEVEL_START_STATE;
                     this.map.state = GAME_STATE_ENUM.LEVEL_START_STATE;
                     this.stateStart = t;
+                    this.levelTimeRemaining = 45;
 
                     this.stopRestartMusic();
                     LEVEL_VARIATION_1_MUSIC.play();
@@ -400,6 +402,7 @@ class GameScene extends Scene {
                     LEVEL_FAILURE_MUSIC.play();
                 } else {
                     if (!this.user.dead) {
+                        this.levelTimeRemaining -= dt;
                         this.moveUser()
                         this.map.render(context, program_state, true);
                         this.user.render(context, program_state);
@@ -547,6 +550,11 @@ class GameScene extends Scene {
 
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
+            
+            // DEV: uncomment for debugging level maps
+            // this.map.render(context, program_state);
+            // this.user.render(context, program_state);
+            // this.renderUserInfo(context, program_state);
         }
     }
 
@@ -561,29 +569,52 @@ class GameScene extends Scene {
     }
 
     renderUserInfo(context, program_state) {
-        // text
-        let lives_transform = Mat4.translation(-3, 1.2, 27.8)
+        // level
+        let level_transform = Mat4.translation(-3, 1.2, 27.8)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-0.6, 0.6, 0.6));
+        this.shapes.text.set_string(`Level ${this.level}`, context.context);
+        this.shapes.text.draw(context, program_state, level_transform, this.materials.text_image);
+
+        // time remaining
+        let time_transform = Mat4.translation(-3, 1.2, 29)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-0.6, 0.6, 0.6));
+        this.shapes.text.set_string(`00:${Math.floor(this.levelTimeRemaining)}`, context.context);
+        this.shapes.text.draw(context, program_state, time_transform, this.materials.text_image);
+
+        // banner left
+        let banner_left_transform = Mat4.translation(-5, 1.1, 28.3)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-12, 2, 1));
+        this.shapes.square.draw(context, program_state, banner_left_transform, this.materials.banner_red);
+
+        // lives remaining
+        let lives_transform = Mat4.translation(35, 1.2, 27.8)
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-0.6, 0.6, 0.6));
         this.shapes.text.set_string(`Lives: ${this.lives}`, context.context);
         this.shapes.text.draw(context, program_state, lives_transform, this.materials.text_image);
 
-        // banner
-        let banner_transform = Mat4.translation(-5, 1.1, 28.3)
-            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
-            .times(Mat4.rotation(Math.PI, 0, 1, 0))
-            .times(Mat4.scale(-12, 2, 1));
-        this.shapes.square.draw(context, program_state, banner_transform, this.materials.banner_red);
-
         // ammo
         const bullet_spacing = 1.3;
         for (let i = 0; i < this.user.clip; i++) {
             let bullet_transform = Mat4.identity()
-                .times(Mat4.translation(-0.6 + i * bullet_spacing, 5, 29)) // Position bullets in front of the camera
+                .times(Mat4.translation(33.5 + i * bullet_spacing, 5, 29)) // Position bullets in front of the camera
                 .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
             this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
         }
+
+        // banner right
+        let banner_right_transform = Mat4.translation(45, 1.1, 28.3)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-12, 2, 1));
+        this.shapes.square.draw(context, program_state, banner_right_transform, this.materials.banner_red);
     }
 
     stopRestartMusic() {
