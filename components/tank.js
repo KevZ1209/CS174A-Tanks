@@ -15,7 +15,7 @@ const MAX_CLIP_SIZE = 4;
 const MOVEMENT_SPEED = 4;
 const ROTATION_SPEED = 2;
 const DODGE_DISTANCE = 1.8;
-const BULLET_CHECK_INTERVAL = 2;
+const BULLET_CHECK_INTERVAL = 1;
 const RANDOM_RELOAD_FACTOR = 1500;
 
 const TANK_TYPE_ENUM = {
@@ -456,8 +456,8 @@ class Tank {
       dodgeDirection = deltaX > 0 ? vec3(-2, 0, 0) : vec3(2, 0, 0); // Left or right
     }
 
-    const newX = this.x + dodgeDirection[0] * 1.5;
-    const newZ = this.z + dodgeDirection[2] * 1.5;
+    const newX = this.x + dodgeDirection[0] * 2;
+    const newZ = this.z + dodgeDirection[2] * 2;
 
     this.setTargetPosition(newX, newZ);
     this.targetBodyOrientation = Math.atan2(dodgeDirection[0], dodgeDirection[2]);
