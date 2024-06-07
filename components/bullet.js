@@ -35,15 +35,15 @@ const SMOKE_TRAIL_PARTICLE_COUNT = 2;
 
 const BULLET_TYPE_ENUM = {
   USER: {
-    speed: 7,
+    speed: 8,
     color: hex_color("#ffffff")
   },
   NORMAL: {
-    speed: 7,
+    speed: 8,
     color: hex_color("#7A705F")
   },
   FAST: {
-    speed: 10,
+    speed: 12,
     color: hex_color("#ff7f7f")
   }
 }

@@ -15,6 +15,7 @@ const MOVEMENT_SPEED = 4;
 const ROTATION_SPEED = 2;
 const DODGE_DISTANCE = 1.8;
 const BULLET_CHECK_INTERVAL = 2;
+const RANDOM_RELOAD_FACTOR = 2500;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -27,25 +28,25 @@ const TANK_TYPE_ENUM = {
     color: hex_color("#C68C2F"),
     can_place_bombs: false,
     bullet_type: BULLET_TYPE_ENUM.NORMAL,
-    reload_time: 5000
+    reload_time: 2500
   },
   ENEMY_MOVING: {
     color: hex_color("#7A705F"),
     can_place_bombs: false,
     bullet_type: BULLET_TYPE_ENUM.NORMAL,
-    reload_time: 3000
+    reload_time: 2500
   },
   ENEMY_MOVING_BOMB: {
     color: hex_color("#DDC436"),
     can_place_bombs: true,
     bullet_type: BULLET_TYPE_ENUM.NORMAL,
-    reload_time: 4000
+    reload_time: 3500
   },
   ENEMY_MOVING_FAST_SHOOTING: {
     color: hex_color("#3F7F6F"),
     can_place_bombs: false,
     bullet_type: BULLET_TYPE_ENUM.FAST,
-    reload_time: 3000
+    reload_time: 2500
   }
 };
 
@@ -68,6 +69,9 @@ class Tank {
     this.user_x = 0;
     this.user_z = 0;
     this.color = this.type.color;
+
+    // have reload time change on every shot
+    this.current_reload_time = this.type.reload_time;
 
     // AI movement
     this.movementSpeed = MOVEMENT_SPEED;
@@ -140,10 +144,16 @@ class Tank {
         }
 
         // shoot user if in view
-        if (t - this.last_reload_time > this.type.reload_time + (8000 * Math.random())) {
+        if (t - this.last_reload_time > this.current_reload_time) {
           if (!this.wallsInFront()) {
             this.shootBullet(this.x, this.z, this.angle, this.type.bullet_type, false, false, false);
             this.last_reload_time = t;
+            this.current_reload_time = this.current_reload_time + (2000 * Math.random()) - 1000;
+          }
+          else {
+            this.shootBullet(this.x, this.z, this.render_angle, this.type.bullet_type, false, false, false);
+            this.last_reload_time = t;
+            this.current_reload_time = this.current_reload_time + (RANDOM_RELOAD_FACTOR * Math.random()) - RANDOM_RELOAD_FACTOR / 2;
           }
         }
       }
@@ -328,7 +338,7 @@ class Tank {
   moveTowardsTarget(dt) {
     const direction = this.targetPosition.minus(vec3(this.x, 0, this.z)).normalized();
     const distance = this.targetPosition.minus(vec3(this.x, 0, this.z)).norm();
-    let slowFactor = 2000;
+    let slowFactor = 1000;
     if (this.chasePlayer) {
       slowFactor = 700;
     } else if (this.isDodging){

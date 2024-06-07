@@ -15,7 +15,7 @@ const INITIAL_USER_ANGLE = Math.PI / 2;
 const INITIAL_CURSOR_X = -10;
 const INITIAL_CURSOR_Z = -10;
 const MAX_LEVELS = schematics.length;
-const TANK_SPEED = 0.035;
+const TANK_SPEED = 5;
 const INITIAL_LIVES = 3;
 
 const GAME_STATE_ENUM = {
@@ -263,7 +263,7 @@ class GameScene extends Scene {
         }
     }
 
-    moveUser() {
+    moveUser(dt) {
         let [new_x, new_z] = this.user.getPosition();
 
         // count how many trues there are. If >= 2, reduce speed by a factor of sqrt(2)
@@ -272,16 +272,16 @@ class GameScene extends Scene {
         const ADJUSTED_TANK_SPEED = trueCount >= 2 ? TANK_SPEED / Math.sqrt(2) : TANK_SPEED;
 
         if (this.direction.up) {
-            new_z -= ADJUSTED_TANK_SPEED;
+            new_z -= ADJUSTED_TANK_SPEED * dt;
         }
         if (this.direction.down) {
-            new_z += ADJUSTED_TANK_SPEED;
+            new_z += ADJUSTED_TANK_SPEED * dt;
         }
         if (this.direction.right) {
-            new_x += ADJUSTED_TANK_SPEED;
+            new_x += ADJUSTED_TANK_SPEED * dt;
         }
         if (this.direction.left) {
-            new_x -= ADJUSTED_TANK_SPEED;
+            new_x -= ADJUSTED_TANK_SPEED * dt;
         }
         this.user.updatePosition(new_x, new_z, this.direction);
     }
@@ -402,8 +402,8 @@ class GameScene extends Scene {
                     LEVEL_FAILURE_MUSIC.play();
                 } else {
                     if (!this.user.dead) {
+                        this.moveUser(dt)
                         this.levelTimeRemaining -= dt;
-                        this.moveUser()
                         this.map.render(context, program_state, true);
                         this.user.render(context, program_state);
                         this.renderUserInfo(context, program_state);
@@ -535,7 +535,7 @@ class GameScene extends Scene {
                 this.displayBackground(context, program_state);
             } else if (this.state === GAME_STATE_ENUM.DEV_STATE) {
                 if (!this.user.dead) {
-                    this.moveUser();
+                    this.moveUser(dt);
                 }
                 this.map.render(context, program_state);
                 this.user.render(context, program_state);
@@ -550,11 +550,6 @@ class GameScene extends Scene {
 
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
-            
-            // DEV: uncomment for debugging level maps
-            // this.map.render(context, program_state);
-            // this.user.render(context, program_state);
-            // this.renderUserInfo(context, program_state);
         }
     }
 
