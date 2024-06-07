@@ -1,9 +1,9 @@
 import { defs, tiny, Subdivision_Sphere, Cube } from './examples/common.js';
 import { Map } from './components/map.js';
 import { Tank, TANK_TYPE_ENUM } from './components/tank.js';
-import { Bullet } from './components/bullet.js';
 import { schematics } from './components/map_schematics.js';
 import { Text_Line } from './examples/text-demo.js';
+import * as AUDIO from './components/audio.js';
 
 const {
     vec, vec3, vec4, color, hex_color, Mat4, Light, Material, Scene, Texture,
@@ -25,7 +25,7 @@ const GAME_STATE_ENUM = {
     LEVEL_STATE: 3,
     LEVEL_CLEARED_STATE: 4,
     LEVEL_FAILED_STATE: 5,
-    PAUSED_STATE: 6,
+    EXTRA_LIFE_STATE: 6,
     LOSE_STATE: 7,
     WIN_STATE: 8,
     DEV_STATE: 9
@@ -38,15 +38,8 @@ const LEVEL_START_STATE_DURATION = 3000;
 const LEVEL_CLEARED_STATE_DURATION = 3000;
 const LEVEL_FAILED_STATE_DURATION = 3000;
 const LEVEL_DURATION = 45000;
+const EXTRA_LIFE_STATE_DURATION = 3000;
 const BACKGROUND_SPEED = 1.5;
-
-// Source: https://downloads.khinsider.com/game-soundtracks/album/wii-play
-const THEME_MUSIC = new Audio("audio/theme.mp3");
-const LEVEL_START_MUSIC = new Audio("audio/level-start.mp3");
-const LEVEL_SUCCESS_MUSIC = new Audio("audio/level-success.mp3");
-const LEVEL_FAILURE_MUSIC = new Audio("audio/level-failure.mp3");
-const LEVEL_VARIATION_1_MUSIC = new Audio("audio/level-variation-1.mp3");
-const GAME_OVER_MUSIC = new Audio("audio/game-over.mp3");
 
 class GameScene extends Scene {
     constructor() {
@@ -130,6 +123,10 @@ class GameScene extends Scene {
                 ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/banner_plain.png")
             }),
+            banner_green: new Material(new defs.Textured_Phong(1), {
+                ambient: 1, diffusivity: 0, specularity: 0,
+                texture: new Texture("assets/banner_green.png")
+            }),
             text_image: new Material(new defs.Textured_Phong(1), {
                 ambient: 1, diffusivity: 0, specularity: 0,
                 texture: new Texture("assets/text.png")
@@ -167,7 +164,7 @@ class GameScene extends Scene {
                     this.map.initializeLevel(0);
                 }
                 this.stopRestartMusic();
-                THEME_MUSIC.play();
+                AUDIO.THEME_MUSIC.play();
             }
             
         },
@@ -185,7 +182,7 @@ class GameScene extends Scene {
         this.key_triggered_button("Start Game", ["Enter"], () => {
                 this.startGame = true;
                 this.stopRestartMusic();
-                THEME_MUSIC.play();
+                AUDIO.THEME_MUSIC.play();
             },
             "#6E6460", () => { this.direction.right = false });
     }
@@ -343,7 +340,7 @@ class GameScene extends Scene {
                     this.map.initializeLevel(this.level);
 
                     this.stopRestartMusic();
-                    LEVEL_START_MUSIC.play();
+                    AUDIO.LEVEL_START_MUSIC.play();
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_INFO_STATE) {
                 let model_transform = Mat4.translation(12, 1.1, 12).times(this.textTransform)
@@ -369,7 +366,7 @@ class GameScene extends Scene {
                     this.levelTimeRemaining = 45;
 
                     this.stopRestartMusic();
-                    LEVEL_VARIATION_1_MUSIC.play();
+                    AUDIO.LEVEL_VARIATION_1_MUSIC.play();
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_START_STATE) {
                 this.map.render(context, program_state, false);
@@ -399,7 +396,7 @@ class GameScene extends Scene {
                     this.stateStart = t;
 
                     this.stopRestartMusic();
-                    LEVEL_FAILURE_MUSIC.play();
+                    AUDIO.LEVEL_FAILURE_MUSIC.play();
                 } else {
                     if (!this.user.dead) {
                         this.moveUser(dt)
@@ -425,7 +422,7 @@ class GameScene extends Scene {
                             this.stateStart = t;
 
                             this.stopRestartMusic();
-                            LEVEL_SUCCESS_MUSIC.play();
+                            AUDIO.LEVEL_SUCCESS_MUSIC.play();
                         }
                     } else {
                         // user died
@@ -435,7 +432,7 @@ class GameScene extends Scene {
                         this.stateStart = t;
 
                         this.stopRestartMusic();
-                        LEVEL_FAILURE_MUSIC.play();
+                        AUDIO.LEVEL_FAILURE_MUSIC.play();
                     }
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_CLEARED_STATE) {
@@ -452,13 +449,22 @@ class GameScene extends Scene {
                 this.renderUserInfo(context, program_state);
 
                 if (t - this.stateStart >= LEVEL_CLEARED_STATE_DURATION) {
+                    // does not add an extra life if we already won!
                     if (this.level >= MAX_LEVELS) {
                         console.log(`cleared level ${this.level} --> win`)
                         this.state = GAME_STATE_ENUM.WIN_STATE;
                         this.stateStart = t;
 
                         this.stopRestartMusic();
-                        THEME_MUSIC.play();
+                        AUDIO.THEME_MUSIC.play();
+                    } else if (this.level % 5 === 0) {
+                        console.log(`cleared level ${this.level} --> extra life`)
+                        this.state = GAME_STATE_ENUM.EXTRA_LIFE_STATE;
+                        this.stateStart = t;
+                        this.lives++;
+
+                        this.stopRestartMusic();
+                        AUDIO.EXTRA_LIFE_MUSIC.play();
                     } else {
                         console.log(`cleared level ${this.level} --> starting level ${this.level}`)
                         this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
@@ -466,10 +472,11 @@ class GameScene extends Scene {
                         this.map.initializeLevel(this.level);
 
                         this.stopRestartMusic();
-                        LEVEL_START_MUSIC.play();
+                        AUDIO.LEVEL_START_MUSIC.play();
                     }
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_FAILED_STATE) {
+                this.map.clearBulletQueue();
                 if (t - this.stateStart >= 500) {
                     let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
                     this.shapes.text.set_string(`Level Failed`, context.context);
@@ -488,7 +495,7 @@ class GameScene extends Scene {
                         this.stateStart = t;
 
                         this.stopRestartMusic();
-                        GAME_OVER_MUSIC.play();
+                        AUDIO.GAME_OVER_MUSIC.play();
                     } else {
                         console.log(`failed level ${this.level} --> info for level ${this.level}`)
                         this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
@@ -496,7 +503,7 @@ class GameScene extends Scene {
                         this.map.initializeLevel(this.level);
 
                         this.stopRestartMusic();
-                        LEVEL_START_MUSIC.play();
+                        AUDIO.LEVEL_START_MUSIC.play();
                     }
                 }
             } else if (this.state === GAME_STATE_ENUM.LOSE_STATE) {
@@ -520,7 +527,7 @@ class GameScene extends Scene {
                     this.user.dead = false;
 
                     this.stopRestartMusic();
-                    LEVEL_START_MUSIC.play();
+                    AUDIO.LEVEL_START_MUSIC.play();
                 }
             } else if (this.state === GAME_STATE_ENUM.WIN_STATE) {
                 let model_transform = Mat4.translation(12, 1.2, 13).times(this.textTransform)
@@ -533,6 +540,27 @@ class GameScene extends Scene {
 
                 this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
                 this.displayBackground(context, program_state);
+            } else if (this.state === GAME_STATE_ENUM.EXTRA_LIFE_STATE) {
+                let model_transform = Mat4.translation(8, 1.2, 13).times(this.textTransform)
+                this.shapes.text.set_string(`Bonus Tank!`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
+
+                let model_transform2 = Mat4.translation(9, 1.2, 17).times(this.subtextTransform)
+                this.shapes.text.set_string(`Lives: ${this.lives-1} -> ${this.lives}`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
+                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_green);
+                this.displayBackground(context, program_state);
+
+                if (t - this.stateStart >= EXTRA_LIFE_STATE_DURATION) {
+                    console.log(`extra life --> info for level ${this.level}`)
+                    this.state = GAME_STATE_ENUM.LEVEL_INFO_STATE;
+                    this.stateStart = t;
+                    this.map.initializeLevel(this.level);
+
+                    this.stopRestartMusic();
+                    AUDIO.LEVEL_START_MUSIC.play();
+                }
             } else if (this.state === GAME_STATE_ENUM.DEV_STATE) {
                 if (!this.user.dead) {
                     this.moveUser(dt);
@@ -613,18 +641,20 @@ class GameScene extends Scene {
     }
 
     stopRestartMusic() {
-        THEME_MUSIC.pause();
-        THEME_MUSIC.currentTime = 0;
-        LEVEL_START_MUSIC.pause();
-        LEVEL_START_MUSIC.currentTime = 0;
-        LEVEL_SUCCESS_MUSIC.pause();
-        LEVEL_SUCCESS_MUSIC.currentTime = 0;
-        LEVEL_FAILURE_MUSIC.pause();
-        LEVEL_FAILURE_MUSIC.currentTime = 0;
-        LEVEL_VARIATION_1_MUSIC.pause();
-        LEVEL_VARIATION_1_MUSIC.currentTime = 0;
-        GAME_OVER_MUSIC.pause();
-        GAME_OVER_MUSIC.currentTime = 0;  
+        AUDIO.THEME_MUSIC.pause();
+        AUDIO.THEME_MUSIC.currentTime = 0;
+        AUDIO.LEVEL_START_MUSIC.pause();
+        AUDIO.LEVEL_START_MUSIC.currentTime = 0;
+        AUDIO.LEVEL_SUCCESS_MUSIC.pause();
+        AUDIO.LEVEL_SUCCESS_MUSIC.currentTime = 0;
+        AUDIO.LEVEL_FAILURE_MUSIC.pause();
+        AUDIO.LEVEL_FAILURE_MUSIC.currentTime = 0;
+        AUDIO.LEVEL_VARIATION_1_MUSIC.pause();
+        AUDIO.LEVEL_VARIATION_1_MUSIC.currentTime = 0;
+        AUDIO.GAME_OVER_MUSIC.pause();
+        AUDIO.GAME_OVER_MUSIC.currentTime = 0;  
+        AUDIO.EXTRA_LIFE_MUSIC.pause();
+        AUDIO.EXTRA_LIFE_MUSIC.currentTime = 0;  
     }
 }
 

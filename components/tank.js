@@ -3,6 +3,7 @@ import { Bomb } from './bomb.js';
 import { Bullet, BULLET_TYPE_ENUM, BULLET_WIDTH, BULLET_HEIGHT, BULLET_DEPTH, BULLET_SCALE } from "./bullet.js";
 import { MAP_SCHEMATIC_ENUM } from "./map.js";
 import { GAME_STATE_ENUM } from '../game-scene.js';
+import * as AUDIO from "./audio.js";
 
 const { vec3, hex_color, Mat4 } = tiny;
 
@@ -22,31 +23,36 @@ const TANK_TYPE_ENUM = {
     color: hex_color("#0F65DE"),
     can_place_bombs: true,
     bullet_type: BULLET_TYPE_ENUM.USER,
-    reload_time: 1500
+    reload_time: 1500,
+    bullet_shoot_sound: AUDIO.BULLET_SHOOT_USER_SOUND
   },
   ENEMY_STATIONARY: {
     color: hex_color("#C68C2F"),
     can_place_bombs: false,
     bullet_type: BULLET_TYPE_ENUM.NORMAL,
-    reload_time: 2500
+    reload_time: 5000,
+    bullet_shoot_sound: AUDIO.BULLET_SHOOT_SOUND
   },
   ENEMY_MOVING: {
     color: hex_color("#7A705F"),
     can_place_bombs: false,
     bullet_type: BULLET_TYPE_ENUM.NORMAL,
-    reload_time: 2500
+    reload_time: 4000,
+    bullet_shoot_sound: AUDIO.BULLET_SHOOT_SOUND
   },
   ENEMY_MOVING_BOMB: {
     color: hex_color("#DDC436"),
     can_place_bombs: true,
     bullet_type: BULLET_TYPE_ENUM.NORMAL,
-    reload_time: 3500
+    reload_time: 4000,
+    bullet_shoot_sound: AUDIO.BULLET_SHOOT_SOUND
   },
   ENEMY_MOVING_FAST_SHOOTING: {
     color: hex_color("#3F7F6F"),
     can_place_bombs: false,
     bullet_type: BULLET_TYPE_ENUM.FAST,
-    reload_time: 2500
+    reload_time: 3000,
+    bullet_shoot_sound: AUDIO.BULLET_SHOOT_ENEMY_FAST_SHOOTING_SOUND
   }
 };
 
@@ -229,6 +235,7 @@ class Tank {
     if (!haveUnlimitedBullets) {
       this.clip--;
     }
+    this.type.bullet_shoot_sound.cloneNode().play();
   }
 
   wallsInFront() {

@@ -1,11 +1,11 @@
-import { defs, tiny, Subdivision_Sphere } from '../examples/common.js';
+import { tiny } from '../examples/common.js';
 import { MAP_SCHEMATIC_ENUM } from './map.js';
 import { Particle } from "./particle.js";
 import { TANK_HEIGHT, TANK_WIDTH, TANK_DEPTH, TANK_TYPE_ENUM } from './tank.js';
-import { Bomb, BOMB_WIDTH, BOMB_HEIGHT, BOMB_DEPTH } from './bomb.js';
+import { BOMB_WIDTH, BOMB_HEIGHT, BOMB_DEPTH } from './bomb.js';
+import * as AUDIO from "./audio.js";
 
-const { vec3, vec4, hex_color, Mat4, Material, color, Texture } = tiny;
-const { Textured_Phong } = defs;
+const { vec3, vec4, hex_color, Mat4, color } = tiny;
 
 const BULLET_SCALE = 0.51;
 const BULLET_SPHERE_SCALE = 0.25;
@@ -205,6 +205,7 @@ class Bullet {
     } else if (this.numCollisions > MAX_BULLET_COLLISIONS) {
       this.spawnSmokeBurst();
       this.shouldRenderBullet = false;
+      AUDIO.BULLET_HIT_DONE_SOUND.cloneNode().play();
     }
 
     // draw bullet
@@ -253,6 +254,7 @@ class Bullet {
         if (xOverlap && yOverlap && zOverlap) {
           this.shouldRenderBullet = false;
           bullet.shouldRenderBullet = false;
+          AUDIO.BULLET_HIT_DONE_SOUND.cloneNode().play();
           const index = Bullet.activeBullets.indexOf(this);
           if (index > -1) {
             Bullet.activeBullets.splice(index, 1);
@@ -283,6 +285,7 @@ class Bullet {
 
       if (xOverlap && yOverlap && zOverlap && !tank.dead) {
         if (tank.type === TANK_TYPE_ENUM.USER || tank.type !== TANK_TYPE_ENUM.USER && this.hits_enemies === true) {
+          AUDIO.TANK_DESTROYED_SOUND.cloneNode().play();
           tank.dead = true;
           this.shouldRenderBullet = false;
           this.spawnSmokeBurst();
@@ -348,8 +351,9 @@ class Bullet {
     }
     if (candidate_blocks.length === 0) {
       return null; // No collision
-    }
-    else {
+    } else {
+      AUDIO.BULLET_HIT_RICOCHET_SOUND.cloneNode().play();
+
       function calc_distance(x1, z1, x2, z2) {
         return Math.sqrt((Math.pow(x1-x2,2))+(Math.pow(z1-z2,2)));
       }
@@ -379,7 +383,6 @@ class Bullet {
       }
 
       return candidate_blocks[min_index];
-
     }
   }
 }
