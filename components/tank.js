@@ -81,6 +81,7 @@ class Tank {
     this.prev_direction = null;
     // have reload time change on every shot
     this.current_reload_time = this.type.reload_time;
+    this.first_shot = true;
 
     // AI movement
     this.movementSpeed = MOVEMENT_SPEED;
@@ -154,16 +155,23 @@ class Tank {
 
         // shoot user if in view
         if (t - this.last_reload_time > this.current_reload_time) {
-          if (!this.wallsInFront()) {
-            this.shootBullet(this.x, this.z, this.angle, this.type.bullet_type, false, false, false);
-            this.last_reload_time = t;
-            this.current_reload_time = this.current_reload_time + (1000 * Math.random()) - 500;
+          if (this.first_shot === false) {
+            if (!this.wallsInFront()) {
+              this.shootBullet(this.x, this.z, this.angle, this.type.bullet_type, false, false, false);
+              this.last_reload_time = t;
+              this.current_reload_time = this.current_reload_time + (1000 * Math.random()) - 500;
+            }
+            else {
+              this.shootBullet(this.x, this.z, this.render_angle, this.type.bullet_type, false, false, false);
+              this.last_reload_time = t;
+              this.current_reload_time = this.current_reload_time + (1000 * Math.random()) - 500;
+            }
           }
           else {
-            this.shootBullet(this.x, this.z, this.render_angle, this.type.bullet_type, false, false, false);
+            this.first_shot = false;
             this.last_reload_time = t;
-            this.current_reload_time = this.current_reload_time + (RANDOM_RELOAD_FACTOR * Math.random()) - RANDOM_RELOAD_FACTOR / 2;
           }
+
         }
       }
 
