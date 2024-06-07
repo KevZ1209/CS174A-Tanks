@@ -54,6 +54,8 @@ class Tank {
   constructor(initial_x, initial_z, initial_angle, type, map) {
     this.x = initial_x;
     this.z = initial_z;
+    this.prev_x = initial_x;
+    this.prev_z = initial_z;
     this.angle = initial_angle
     this.render_angle = initial_angle;
     this.map = map;
@@ -69,7 +71,8 @@ class Tank {
     this.user_x = 0;
     this.user_z = 0;
     this.color = this.type.color;
-
+    this.move_random_index = Math.floor(Math.random() * 4);
+    this.prev_direction = null;
     // have reload time change on every shot
     this.current_reload_time = this.type.reload_time;
 
@@ -286,7 +289,7 @@ class Tank {
     }
     if (this.movementTimer >= timer) { // Move every second
       this.movementTimer = 0;
-      this.moveRandomly();
+      this.moveRandomly_v2();
     }
   }
 
@@ -321,7 +324,7 @@ class Tank {
     ];
 
     const randomIndex = Math.floor(Math.random() * directions.length);
-    const direction = directions.splice(randomIndex, 1)[0];
+    const direction = directions[randomIndex];
     const newX = this.x + direction[0] * TANK_WIDTH * 4;
     const newZ = this.z + direction[2] * TANK_DEPTH * 4;
 
@@ -330,15 +333,61 @@ class Tank {
 
   }
 
+  moveRandomly_v2() {
+    this.prev_move_index = this.move_random_index;
+
+    const directions = [
+      vec3(2, 0, 0),
+      vec3(-2, 0, 0),
+      vec3(0, 0, 2),
+      vec3(0, 0, -2),
+      vec3(2, 0, 0),
+      vec3(-2, 0, 0),
+      vec3(0, 0, 2),
+      vec3(0, 0, -2), // higher probability of horizontal/vertical movement
+
+      vec3(2,0,2),
+      vec3(-2,0,2),
+      vec3(2,0,-2),
+      vec3(-2,0,-2),
+    ];
+    // console.log(this.prev_x, this.x, this.prev_z, this.z)
+    if (this.x === this.prev_x && this.z === this.prev_z) {
+      this.move_random_index = Math.floor(Math.random() * directions.length);
+      while (this.move_random_index % 4 === this.prev_move_index % 4) {
+        this.move_random_index = Math.floor(Math.random() * directions.length);
+      }
+    }
+    else {
+      // random movement just cuz...
+      const RANDOM_PROB = 0.25;
+      if (Math.random() <= RANDOM_PROB) {
+        this.move_random_index = Math.floor(Math.random() * directions.length);
+      }
+    }
+
+    let randomIndex = this.move_random_index;
+    let direction = directions[randomIndex];
+
+    const newX = this.x + direction[0] * TANK_WIDTH * 4;
+    const newZ = this.z + direction[2] * TANK_DEPTH * 4;
+
+    this.setTargetPosition(newX, newZ);
+    this.targetBodyOrientation = Math.atan2(direction[0], direction[2]);
+  }
+
   setTargetPosition(new_x, new_z) {
     this.targetPosition = vec3(new_x, 0, new_z);
     this.reachedTarget = false;
   }
 
   moveTowardsTarget(dt) {
+    this.prev_x = this.x;
+    this.prev_z = this.z;
+
     const direction = this.targetPosition.minus(vec3(this.x, 0, this.z)).normalized();
     const distance = this.targetPosition.minus(vec3(this.x, 0, this.z)).norm();
-    let slowFactor = 1000;
+    let slowFactor = 700;
     if (this.chasePlayer) {
       slowFactor = 700;
     } else if (this.isDodging){
@@ -356,7 +405,7 @@ class Tank {
         let newZ = this.z + direction[2]/slowFactor;
         if (!this.checkCollision(newX,newZ)) {
           this.x = newX;
-          this.z =newZ;
+          this.z = newZ;
         } else {
           break;
         }
@@ -432,6 +481,13 @@ class Tank {
   }
 
   updatePosition(new_x, new_z, direction = null) {
+    this.prev_x = this.x;
+    this.prev_z = this.z;
+
+    if (this.type === TANK_TYPE_ENUM.ENEMY_MOVING) {
+      console.log(this.prev_x, this.x, this.prev_z, this.z);
+    }
+
     if (direction) {
 
       // up, down, left, right
