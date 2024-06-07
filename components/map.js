@@ -15,12 +15,17 @@ const MAP_SCHEMATIC_ENUM = {
     EMPTY: '0',
     BLOCK: '1',
     CORK: '2',
+    BLOCK2: '4',
+    CORK2: '5',
+    BLOCK3: '6',
+    CORK3: '7',
     HOLE: '3',
     USER: '*',
     ENEMY_STATIONARY: 's',
     ENEMY_MOVING: 'm',
     ENEMY_MOVING_BOMB: 'b',
-    ENEMY_MOVING_FAST_SHOOTING: 'f'
+    ENEMY_MOVING_FAST_SHOOTING: 'f',
+    ENEMY_MOVING_FAST_RELOAD: 'r'
 }
 
 const BLOCK_COLOR = hex_color("#D9AD89");
@@ -136,7 +141,6 @@ class Map {
                 let z = i * BLOCK_SIZE; // i corresponse to z in WS
 
                 if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.BLOCK) {
-                    // if current character is a BLOCK
                     let block_position = model_transform.times(vec4(0, 0, 0, 1));
                     this.collisionMap.push({
                         position: block_position.to3(),
@@ -145,8 +149,25 @@ class Map {
                         type: MAP_SCHEMATIC_ENUM.BLOCK,
                         material: this.getRandomBlockMaterial()
                     });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.BLOCK2) {
+                    let block_position = model_transform.times(vec4(0, 0, 0, 1));
+                    this.collisionMap.push({
+                        position: block_position.to3(),
+                        model_transform: model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.BLOCK2,
+                        material: this.getRandomBlockMaterial()
+                    });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.BLOCK3) {
+                    let block_position = model_transform.times(vec4(0, 0, 0, 1));
+                    this.collisionMap.push({
+                        position: block_position.to3(),
+                        model_transform: model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.BLOCK3,
+                        material: this.getRandomBlockMaterial()
+                    });
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.CORK) {
-                    // if current character is a CORK
                     let cork_position = model_transform.times(vec4(0, 0, 0, 1));
                     this.collisionMap.push({
                         position: cork_position.to3(),
@@ -155,8 +176,25 @@ class Map {
                         type: MAP_SCHEMATIC_ENUM.CORK,
                         material: this.materials.cork
                     });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.CORK2) {
+                    let block_position = model_transform.times(vec4(0, 0, 0, 1));
+                    this.collisionMap.push({
+                        position: block_position.to3(),
+                        model_transform: model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.CORK2,
+                        material: this.materials.cork
+                    });
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.CORK3) {
+                    let block_position = model_transform.times(vec4(0, 0, 0, 1));
+                    this.collisionMap.push({
+                        position: block_position.to3(),
+                        model_transform: model_transform,
+                        size: BLOCK_SIZE,
+                        type: MAP_SCHEMATIC_ENUM.CORK3,
+                        material: this.materials.cork
+                    });
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.HOLE) {
-                    // if current character is a HOLE
                     let hole_position = model_transform.times(vec4(0, 0, 0, 1))
                     let hole_model_transform = model_transform.times(Mat4.translation(0, -0.9, 0))
                         .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
@@ -168,28 +206,27 @@ class Map {
                         material: this.materials.hole
                     });
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.USER) {
-                    // if current character is an USER
                     this.userPosition = vec4(x, 0, z, 1);
                     this.user.updatePosition(x, z);
                     this.user.angle = Math.PI / 2;
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_STATIONARY) {
-                    // if current character is an ENEMY_STATIONARY
                     let enemy = new Tank(x, z, -Math.PI / 2, TANK_TYPE_ENUM.ENEMY_STATIONARY, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING) {
-                    // if current character is an ENEMY_MOVING
                     let enemy = new Tank(x, z, -Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_BOMB) {
-                    // if current character is an ENEMY_MOVING_BOMB
                     let enemy = new Tank(x, z, -Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_BOMB, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_FAST_SHOOTING) {
-                    // if current character is an ENEMY_MOVING_FAST_SHOOTING
                     let enemy = new Tank(x, z, -Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_FAST_SHOOTING, this);
+                    enemy.angle = -Math.PI / 2;
+                    this.enemies.push(enemy);
+                } else if (schematic[curr_index] === MAP_SCHEMATIC_ENUM.ENEMY_MOVING_FAST_RELOAD) {
+                    let enemy = new Tank(x, z, -Math.PI / 2, TANK_TYPE_ENUM.ENEMY_MOVING_FAST_RELOAD, this);
                     enemy.angle = -Math.PI / 2;
                     this.enemies.push(enemy);
                 } else if (schematic[curr_index] !== MAP_SCHEMATIC_ENUM.EMPTY) {
@@ -223,10 +260,15 @@ class Map {
 
         //  draw elements
         for (let elem of this.collisionMap) {
-            if (elem.type === MAP_SCHEMATIC_ENUM.BLOCK) {
+            if (elem.type === MAP_SCHEMATIC_ENUM.BLOCK || elem.type === MAP_SCHEMATIC_ENUM.CORK) {
                 this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
-            } else if (elem.type === MAP_SCHEMATIC_ENUM.CORK) {
+            } else if (elem.type === MAP_SCHEMATIC_ENUM.BLOCK2 || elem.type === MAP_SCHEMATIC_ENUM.CORK2) {
                 this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
+                this.shapes.block.draw(context, program_state, elem.model_transform.times(Mat4.translation(0, 2, 0)), elem.material);
+            } else if (elem.type === MAP_SCHEMATIC_ENUM.BLOCK3 || elem.type === MAP_SCHEMATIC_ENUM.CORK3) {
+                this.shapes.block.draw(context, program_state, elem.model_transform, elem.material);
+                this.shapes.block.draw(context, program_state, elem.model_transform.times(Mat4.translation(0, 2, 0)), elem.material);
+                this.shapes.block.draw(context, program_state, elem.model_transform.times(Mat4.translation(0, 3, 0)), elem.material);
             } else if (elem.type === MAP_SCHEMATIC_ENUM.HOLE) {
                 this.shapes.square.draw(context, program_state, elem.model_transform, elem.material);
             }

@@ -106,7 +106,11 @@ class Bomb {
     let newCollisionMap = [];
 
     for (let elem of this.map.collisionMap) {
-      if (elem.type === MAP_SCHEMATIC_ENUM.CORK) {
+      if (
+        elem.type === MAP_SCHEMATIC_ENUM.CORK ||
+        elem.type === MAP_SCHEMATIC_ENUM.CORK2 ||
+        elem.type === MAP_SCHEMATIC_ENUM.CORK3
+      ) {
 
         const bombMin = position.minus(vec3(BOMB_WIDTH, BOMB_HEIGHT, BOMB_DEPTH));
         const bombMax = position.plus(vec3(BOMB_WIDTH + BOMB_RADIUS, BOMB_HEIGHT + BOMB_RADIUS, BOMB_DEPTH + BOMB_RADIUS));
