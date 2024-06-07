@@ -297,7 +297,9 @@ class Tank {
       case TANK_TYPE_ENUM.ENEMY_MOVING_FAST_SHOOTING:
         this.detectAndDodgeBullets(dt);
         break;
-        // other cases for different tank types
+      case TANK_TYPE_ENUM.ENEMY_MOVING_FAST_RELOAD:
+        this.detectAndDodgeBullets(dt);
+        break;
       default:
         break;
     }
