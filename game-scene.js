@@ -64,7 +64,7 @@ class GameScene extends Scene {
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-60, 10, 1));
-        this.bannerPlainTransform = Mat4.translation(-5, 1.1, 15)
+        this.bannerPlainTransform = Mat4.translation(-5, 4.1, 15)
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-60, 6, 1));
@@ -204,7 +204,7 @@ class GameScene extends Scene {
 
         // 3. find intersection with the given plane (y = yWS)
         let t_ground = -pos_world_near[1] / (pos_world_far[1] - pos_world_near[1]);
-        let t_cursor = (1.1 - pos_world_near[1]) / (pos_world_far[1] - pos_world_near[1]);
+        let t_cursor = (4.3 - pos_world_near[1]) / (pos_world_far[1] - pos_world_near[1]);
         let pos_world_ground = pos_world_near.plus(pos_world_far.minus(pos_world_near).times(t_ground));
         let pos_world_cursor = pos_world_near.plus(pos_world_far.minus(pos_world_near).times(t_cursor));
 
@@ -290,7 +290,7 @@ class GameScene extends Scene {
             this.initialized = true;
 
             // initialize global camera and projection matrices
-            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI / (2.5), 1, 0, 0)));
+            program_state.set_camera(Mat4.translation(-19, 15, -44).times(Mat4.rotation(Math.PI / 2.4, 1, 0, 0)));
 
             // initialize event listeners
             let canvas = context.canvas;
@@ -318,7 +318,7 @@ class GameScene extends Scene {
         program_state.lights = [new Light(light_position, color(1, 1, 1, 1), 1000)];
 
         // user cursor
-        let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 1.3, this.cursor_z))
+        let cursor_transform = Mat4.identity().times(Mat4.translation(this.cursor_x, 4.3, this.cursor_z))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.rotation(Math.PI / 2, 1, 0, 0));
         this.shapes.square.draw(context, program_state, cursor_transform, this.materials.cursor);
@@ -383,7 +383,7 @@ class GameScene extends Scene {
             } else if (this.state === GAME_STATE_ENUM.LEVEL_STATE) {
                 if (t <= this.stateStart + 1000) {
                     this.startOpacity -= dt;
-                    let model_transform = Mat4.translation(14, 1.2, 16).times(this.textTransform);
+                    let model_transform = Mat4.translation(14, 4.2, 16).times(this.textTransform);
                     this.shapes.text.set_string(`Start!`, context.context);
                     this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
                 }
@@ -438,7 +438,7 @@ class GameScene extends Scene {
             } else if (this.state === GAME_STATE_ENUM.LEVEL_CLEARED_STATE) {
                 this.map.clearBulletQueue();
                 if (t - this.stateStart >= 1000) {
-                    let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+                    let model_transform = Mat4.translation(5, 4.2, 15).times(this.textTransform)
                     this.shapes.text.set_string(`Level Cleared!`, context.context);
                     this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
                     this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
@@ -478,7 +478,7 @@ class GameScene extends Scene {
             } else if (this.state === GAME_STATE_ENUM.LEVEL_FAILED_STATE) {
                 this.map.clearBulletQueue();
                 if (t - this.stateStart >= 500) {
-                    let model_transform = Mat4.translation(5, 1.2, 15).times(this.textTransform)
+                    let model_transform = Mat4.translation(5, 4.2, 15).times(this.textTransform)
                     this.shapes.text.set_string(`Level Failed`, context.context);
                     this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
                     this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_plain);
@@ -578,6 +578,14 @@ class GameScene extends Scene {
 
             this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
             this.displayBackground(context, program_state);
+
+            // DEV: uncomment the following lines and set initializeLevel(n) in display setup() to test map layouts
+            // if (!this.user.dead) {
+            //     this.moveUser(dt);
+            // }
+            // this.map.render(context, program_state);
+            // this.user.render(context, program_state);
+            // this.renderUserInfo(context, program_state)
         }
     }
 
@@ -627,7 +635,7 @@ class GameScene extends Scene {
         const bullet_spacing = 1.3;
         for (let i = 0; i < this.user.clip; i++) {
             let bullet_transform = Mat4.identity()
-                .times(Mat4.translation(33.5 + i * bullet_spacing, 5, 29)) // Position bullets in front of the camera
+                .times(Mat4.translation(34.3 + i * bullet_spacing, 3, 29)) // Position bullets in front of the camera
                 .times(Mat4.scale(0.45, 0.45, 0.45)); // Adjust bullet size
             this.shapes.ammo.draw(context, program_state, bullet_transform, this.materials.ammo);
         }

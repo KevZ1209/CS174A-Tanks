@@ -53,6 +53,13 @@ const TANK_TYPE_ENUM = {
     bullet_type: BULLET_TYPE_ENUM.FAST,
     reload_time: 3000,
     bullet_shoot_sound: AUDIO.BULLET_SHOOT_ENEMY_FAST_SHOOTING_SOUND
+  },
+  ENEMY_MOVING_FAST_RELOAD: {
+    color: hex_color("#99424B"),
+    can_place_bombs: false,
+    bullet_type: BULLET_TYPE_ENUM.NORMAL,
+    reload_time: 1500,
+    bullet_shoot_sound: AUDIO.BULLET_SHOOT_SOUND
   }
 };
 
