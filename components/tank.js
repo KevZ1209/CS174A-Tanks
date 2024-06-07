@@ -16,7 +16,7 @@ const MOVEMENT_SPEED = 4;
 const ROTATION_SPEED = 2;
 const DODGE_DISTANCE = 1.8;
 const BULLET_CHECK_INTERVAL = 2;
-const RANDOM_RELOAD_FACTOR = 2500;
+const RANDOM_RELOAD_FACTOR = 1500;
 
 const TANK_TYPE_ENUM = {
   USER: {
@@ -304,7 +304,7 @@ class Tank {
     const playerPosition = this.map.user.getPosition();
     const distanceToPlayer = vec3(this.x, 0, this.z).minus(vec3(playerPosition[0], 0, playerPosition[1])).norm();
 
-    if (distanceToPlayer < 14 && !this.wallsInFront()) { // Chase player if within 10 units
+    if (distanceToPlayer < 22 && !this.wallsInFront()) { // Chase player if within 10 units
       this.setTargetPosition(playerPosition[0], playerPosition[1]);
       this.targetBodyOrientation = Math.atan2(playerPosition[0] - this.x, playerPosition[1] - this.z);
       this.chasePlayer = true;
