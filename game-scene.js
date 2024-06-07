@@ -72,6 +72,10 @@ class GameScene extends Scene {
             .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
             .times(Mat4.rotation(Math.PI, 0, 1, 0))
             .times(Mat4.scale(-40, 20, 20));
+        this.bannerGreenTransform = Mat4.translation(-5, 1, 15)
+            .times(Mat4.rotation(-Math.PI / 2, 1, 0, 0))
+            .times(Mat4.rotation(Math.PI, 0, 1, 0))
+            .times(Mat4.scale(-60, 10, 1));
 
         // map
         this.map = new Map(this.state);
@@ -515,7 +519,7 @@ class GameScene extends Scene {
                 this.shapes.text.set_string(`Click anywhere to restart`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+                this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
                 this.displayBackground(context, program_state);
 
                 if (this.continue) {
@@ -538,7 +542,7 @@ class GameScene extends Scene {
                 this.shapes.text.set_string(`Thanks for playing`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_red);
+                this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
                 this.displayBackground(context, program_state);
             } else if (this.state === GAME_STATE_ENUM.EXTRA_LIFE_STATE) {
                 let model_transform = Mat4.translation(8, 1.2, 13).times(this.textTransform)
@@ -549,7 +553,7 @@ class GameScene extends Scene {
                 this.shapes.text.set_string(`Lives: ${this.lives-1} -> ${this.lives}`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-                this.shapes.square.draw(context, program_state, this.bannerPlainTransform, this.materials.banner_green);
+                this.shapes.square.draw(context, program_state, this.bannerGreenTransform, this.materials.banner_green);
                 this.displayBackground(context, program_state);
 
                 if (t - this.stateStart >= EXTRA_LIFE_STATE_DURATION) {
