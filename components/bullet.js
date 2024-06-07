@@ -73,7 +73,11 @@ class Bullet {
 
     this.burstCount = 0;
 
-    Bullet.activeBullets.push(this);
+    if (this.checkCollision()) {
+      this.shouldRenderBullet = false;
+    } else {
+      Bullet.activeBullets.push(this);
+    }
   }
 
   update(dt) {
@@ -225,7 +229,9 @@ class Bullet {
     }
 
   }
-
+  checkIfInWall() {
+    let position = this.position.to3();
+  }
   renderSmoke(context,program_state) {
     // draw smoke
     for (const particle of this.particles) {
@@ -235,7 +241,7 @@ class Bullet {
       this.shapes.sphere.draw(context, program_state, particle_transform, particleMaterial);
     }
   }
-
+  
   checkBulletCollision() {
     let position = this.position.to3();
     for (let bullet of Bullet.activeBullets) {
@@ -320,6 +326,7 @@ class Bullet {
       }
     }
   }
+
 
   checkCollision() {
     let position = this.position.to3();
