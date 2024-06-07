@@ -48,7 +48,7 @@ class GameScene extends Scene {
 
         this.initialized = false;
         this.startGame = false;
-        this.state = GAME_STATE_ENUM.DEV_STATE; // TODO: change this to TITLE_STATE for production
+        this.state = GAME_STATE_ENUM.TITLE_STATE; // TODO: change this to TITLE_STATE for production
         this.continue = false;
         this.stateStart = 0;
         this.levelTimeRemaining = 45;
@@ -157,11 +157,21 @@ class GameScene extends Scene {
             "#6E6460", () => { this.direction.right = false });
         this.new_line();
         this.key_triggered_button("Place Bomb", ["e"], () => this.handleBomb(),
-            "#6E6460", () => { this.direction.right = false });
+            "#6E6460", () => {});
+        this.new_line();
+        this.key_triggered_button("Start Game", ["Enter"], () => {
+            if (!this.startGame) {
+                this.startGame = true;
+                this.stateStart = this.t;
+                this.stopRestartMusic();
+                AUDIO.THEME_MUSIC.play();
+            }
+        }, "#6E6460", () => {});
         this.new_line();
         this.key_triggered_button("Toggle Dev Mode", ["l"], () => {
             if (this.startGame) {
                 if (this.state === GAME_STATE_ENUM.DEV_STATE) {
+                    this.stateStart = this.t;
                     this.state = GAME_STATE_ENUM.TITLE_STATE;
                 } else {
                     this.state = GAME_STATE_ENUM.DEV_STATE;
@@ -171,24 +181,17 @@ class GameScene extends Scene {
                 AUDIO.THEME_MUSIC.play();
             }
             
-        },
-            "#6E6460", () => { this.direction.right = false });
-        this.new_line();
-        this.key_triggered_button("Unlimited Bullets", ["u"], () => {
-            this.haveUnlimitedBullets = !this.haveUnlimitedBullets;
-        },
-            "#6E6460", () => { this.direction.right = false});
-        this.new_line();
-        this.key_triggered_button("Hitbox on", ["h"], () => {
-                this.hitboxOn = !this.hitboxOn;
-            },
-            "#6E6460", () => { this.direction.right = false });
-        this.key_triggered_button("Start Game", ["Enter"], () => {
-                this.startGame = true;
-                this.stopRestartMusic();
-                AUDIO.THEME_MUSIC.play();
-            },
-            "#6E6460", () => { this.direction.right = false });
+        }, "#6E6460", () => {});
+        // this.new_line();
+        // this.key_triggered_button("Unlimited Bullets", ["u"], () => {
+        //     this.haveUnlimitedBullets = !this.haveUnlimitedBullets;
+        // },
+        //     "#6E6460", () => { this.direction.right = false});
+        // this.new_line();
+        // this.key_triggered_button("Hitbox on", ["h"], () => {
+        //         this.hitboxOn = !this.hitboxOn;
+        //     },
+        //     "#6E6460", () => { this.direction.right = false });
     }
 
     // convert screen space position to world space position
@@ -312,6 +315,7 @@ class GameScene extends Scene {
         // ** Render ** display all set perspective, lights, and models in the scene
         const t = program_state.animation_time;
         const dt = program_state.animation_delta_time / 1000;
+        this.t = t; // for toggling between dev and game mode
 
         // perspective
         program_state.projection_transform = Mat4.perspective(
