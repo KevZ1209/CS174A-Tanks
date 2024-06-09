@@ -128,6 +128,8 @@ class Map {
         this.bomb_queue = []
         this.bullet_queue = []
         this.user.dead = false;
+        this.user.angle = - Math.PI / 2;
+        this.user.body_orientation = Math.PI / 2;
 
         // parse schematic
         this.level = level;
@@ -246,8 +248,17 @@ class Map {
     }
 
     clearBulletQueue() {
-        // clear bullet queue (for in between levels)(
         this.bullet_queue.splice(0, this.bullet_queue.length)
+    }
+
+    clearBombQueue() {
+        this.bomb_queue.splice(0, this.bomb_queue.length);
+        this.user.bombActive = false;
+    }
+
+    resetUserRotation() {
+        this.user.angle = - Math.PI / 2;
+        this.user.body_orientation = Math.PI / 2;
     }
 
     render(context, program_state, start_shooting=true) {

@@ -167,21 +167,21 @@ class GameScene extends Scene {
                 AUDIO.THEME_MUSIC.play();
             }
         }, "#6E6460", () => {});
-        this.new_line();
-        this.key_triggered_button("Toggle Dev Mode", ["l"], () => {
-            if (this.startGame) {
-                if (this.state === GAME_STATE_ENUM.DEV_STATE) {
-                    this.stateStart = this.t;
-                    this.state = GAME_STATE_ENUM.TITLE_STATE;
-                } else {
-                    this.state = GAME_STATE_ENUM.DEV_STATE;
-                    this.map.initializeLevel(0);
-                }
-                this.stopRestartMusic();
-                AUDIO.THEME_MUSIC.play();
-            }
+        // this.new_line();
+        // this.key_triggered_button("Toggle Dev Mode", ["l"], () => {
+        //     if (this.startGame) {
+        //         if (this.state === GAME_STATE_ENUM.DEV_STATE) {
+        //             this.stateStart = this.t;
+        //             this.state = GAME_STATE_ENUM.TITLE_STATE;
+        //         } else {
+        //             this.state = GAME_STATE_ENUM.DEV_STATE;
+        //             this.map.initializeLevel(0);
+        //         }
+        //         this.stopRestartMusic();
+        //         AUDIO.THEME_MUSIC.play();
+        //     }
             
-        }, "#6E6460", () => {});
+        // }, "#6E6460", () => {});
         // this.new_line();
         // this.key_triggered_button("Unlimited Bullets", ["u"], () => {
         //     this.haveUnlimitedBullets = !this.haveUnlimitedBullets;
@@ -334,9 +334,14 @@ class GameScene extends Scene {
         // ** Game Loop **
         if (this.startGame) {
             if (this.state === GAME_STATE_ENUM.TITLE_STATE) {
-                let text_transform = Mat4.translation(14, 1.1, 16).times(this.textTransform)
-                this.shapes.text.set_string("Tanks!", context.context);
+                let text_transform = Mat4.translation(7, 1.1, 13).times(this.textTransform)
+                this.shapes.text.set_string("CS174A Tanks!", context.context);
                 this.shapes.text.draw(context, program_state, text_transform, this.materials.text_image);
+
+                let model_transform2 = Mat4.translation(10, 1.2, 17).times(this.subtextTransform)
+                this.shapes.text.set_string(`Created by AKA`, context.context);
+                this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
+
                 this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
                 this.displayBackground(context, program_state);
 
@@ -351,15 +356,15 @@ class GameScene extends Scene {
                     AUDIO.LEVEL_START_MUSIC.play();
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_INFO_STATE) {
-                let model_transform = Mat4.translation(12, 1.1, 12).times(this.textTransform)
+                let model_transform = Mat4.translation(13, 1.1, 12).times(this.textTransform)
                 this.shapes.text.set_string(`Level ${this.level}`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
 
-                let model_transform2 = Mat4.translation(9, 1.2, 16).times(this.subtextTransform)
+                let model_transform2 = Mat4.translation(10, 1.2, 16).times(this.subtextTransform)
                 this.shapes.text.set_string(`Enemy tanks: ${this.map.enemies.length}`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform2, this.materials.text_image);
 
-                let model_transform3 = Mat4.translation(13.5, 1.2, 18.7).times(this.subtextTransform)
+                let model_transform3 = Mat4.translation(14.5, 1.2, 18.7).times(this.subtextTransform)
                 this.shapes.text.set_string(`Lives: ${this.lives}`, context.context);
                 this.shapes.text.draw(context, program_state, model_transform3, this.materials.text_image);
 
@@ -368,6 +373,7 @@ class GameScene extends Scene {
 
                 if (t - this.stateStart >= LEVEL_INFO_STATE_DURATION) {
                     console.log(`info for level ${this.level} --> starting level ${this.level}`)
+                    this.map.resetUserRotation();
                     this.state = GAME_STATE_ENUM.LEVEL_START_STATE;
                     this.map.state = GAME_STATE_ENUM.LEVEL_START_STATE;
                     this.stateStart = t;
@@ -379,6 +385,7 @@ class GameScene extends Scene {
             } else if (this.state === GAME_STATE_ENUM.LEVEL_START_STATE) {
                 this.map.render(context, program_state, false);
                 this.map.clearBulletQueue();
+                this.map.clearBombQueue();
                 this.user.render(context, program_state);
                 this.renderUserInfo(context, program_state);
 
@@ -445,6 +452,7 @@ class GameScene extends Scene {
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_CLEARED_STATE) {
                 this.map.clearBulletQueue();
+                this.map.clearBombQueue();
                 if (t - this.stateStart >= 1000) {
                     let model_transform = Mat4.translation(5, 4.2, 15).times(this.textTransform)
                     this.shapes.text.set_string(`Level Cleared!`, context.context);
@@ -485,6 +493,7 @@ class GameScene extends Scene {
                 }
             } else if (this.state === GAME_STATE_ENUM.LEVEL_FAILED_STATE) {
                 this.map.clearBulletQueue();
+                this.map.clearBombQueue();
                 if (t - this.stateStart >= 500) {
                     let model_transform = Mat4.translation(5, 4.2, 15).times(this.textTransform)
                     this.shapes.text.set_string(`Level Failed`, context.context);
@@ -580,11 +589,11 @@ class GameScene extends Scene {
             }
         } else {
             // pressing a button is required to make audio work in javascript code
-            let model_transform = Mat4.translation(-3, 1.2, 16).times(this.textTransform)
+            let model_transform = Mat4.translation(-2, 1.2, 16).times(this.textTransform)
             this.shapes.text.set_string(`Click Enter to start`, context.context);
             this.shapes.text.draw(context, program_state, model_transform, this.materials.text_image);
 
-            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_red);
+            this.shapes.square.draw(context, program_state, this.bannerRedTransform, this.materials.banner_green);
             this.displayBackground(context, program_state);
 
             // DEV: uncomment the following lines and set initializeLevel(n) in display setup() to test map layouts
